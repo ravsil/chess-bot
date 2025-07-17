@@ -1,0 +1,92 @@
+body {
+    margin: 0;
+    background: linear-gradient(120deg, #a18cd1 0%, #fbc2eb 100%);
+    overflow: hidden;
+    height: 100vh;
+    position: relative;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    background: url('data:image/svg+xml;utf8,<svg width="100%" height="100%" viewBox="0 0 1045 320" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="scale(1,-1) translate(0,-320)"><path fill="%23fff" fill-opacity="0.2" d="M0,192L60,186.7C120,181,240,171,360,176C480,181,600,203,720,208C840,213,960,203,1080,186.7C1200,171,1320,149,1380,138.7L1440,128L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path></g></svg>');
+    background-size: cover;
+    animation: wave 20s linear infinite;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 80vh;
+    z-index: -1;
+    background: url('data:image/svg+xml;utf8,<svg width="100%" height="100%" viewBox="0 0 1045 320" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="scale(1,-1) translate(0,-320)"><path fill="%23fff" fill-opacity="0.1" d="M0,192L60,186.7C120,181,240,171,360,176C480,181,600,203,720,208C840,213,960,203,1080,186.7C1200,171,1320,149,1380,138.7L1440,128L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path></g></svg>');
+    background-size: cover;
+    animation: lilwave 10s linear infinite;
+}
+
+@keyframes wave {
+    0% {
+        background-position-x: 0;
+    }
+
+    100% {
+        background-position-x: 156.5vw;
+    }
+}
+
+@keyframes lilwave {
+    0% {
+        background-position-x: 0;
+    }
+
+    100% {
+        background-position-x: 125.2vw;
+    }
+}
+
+#board {
+    margin-top: 3vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+}
+
+.square {
+    width: 5vw;
+    height: 5vw;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.black {
+    background-color: #8b5e3c;
+}
+
+.white {
+    background-color: #e9d7b0;
+}
+
+.piece {
+    width: 4vw;
+    height: 4vw;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
