@@ -1,229 +1,146 @@
-package main
+package bot
 
-import (
-	"fmt"
-)
+type PType int
 
-
-type PieceType int
 const (
-	ROOK PieceType = iota
+	ROOK PType = iota
 	KNIGHT
 	BISHOP
 	QUEEN
 	KING
 )
 
-type Color int
+type PColor int
+
 const (
-	WHITE Color = iota
+	WHITE PColor = iota
 	BLACK
 )
 
 type Pieces interface {
-	GetColor() Color
-	GetValidMoves(board [][]Pieces, player Color) ValidMoves
+	GetColor() PColor
+	GetValidMoves(board [][]Pieces) ValidMoves
 }
 
 type Pos struct {
-	x int
-	y int
+	X int
+	Y int
 }
 
 type Pawn struct {
-	pos Pos
-	color Color
-	firstMove bool
-	canBeEnPassanted bool
+	Pos              Pos
+	Color            PColor
+	FirstMove        bool
+	CanBeEnPassanted bool
 }
 
 type Piece struct {
-	pos Pos
-	pieceType PieceType
-	color Color
-	moved bool
+	Pos       Pos
+	PieceType PType
+	Color     PColor
+	Moved     bool
 }
 
 type ValidMoves struct {
-	p Pieces
-	moves []Pos
+	P     Pieces
+	Moves []Pos
 }
 
-func (p *Pawn) GetColor() Color { return p.color  }
-func (p *Piece) GetColor() Color { return p.color  }
+func (p *Pawn) GetColor() PColor  { return p.Color }
+func (p *Piece) GetColor() PColor { return p.Color }
 
-func (p *Pawn) GetValidMoves(board [][]Pieces, player Color) ValidMoves {
-	validMoves := ValidMoves{ p: p, moves: []Pos{} }
+func (p *Pawn) GetValidMoves(board [][]Pieces) ValidMoves {
+	validMoves := ValidMoves{P: p, Moves: []Pos{}}
 	var direction int
-	if p.color == WHITE {
+	if p.Color == WHITE {
 		direction = 1
 	} else {
 		direction = -1
 	}
-	
+
 	// forward once
-	if board[p.pos.y + direction][p.pos.x] == nil {
-		validMoves.moves = append(validMoves.moves, Pos{x: p.pos.x, y: p.pos.y + direction})
+	if board[p.Pos.Y+direction][p.Pos.X] == nil {
+		validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X, Y: p.Pos.Y + direction})
 	}
 
 	// forward twice
-	if p.firstMove && board[p.pos.y + 2*direction][p.pos.x] == nil && board[p.pos.y + direction][p.pos.x] == nil {
-		validMoves.moves = append(validMoves.moves, Pos{x: p.pos.x, y: p.pos.y + 2*direction})
+	if p.FirstMove && board[p.Pos.Y+2*direction][p.Pos.X] == nil && board[p.Pos.Y+direction][p.Pos.X] == nil {
+		validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X, Y: p.Pos.Y + 2*direction})
 	}
 
-	if p.pos.x - 1 >= 0 {
+	if p.Pos.X-1 >= 0 {
 		// capture left
-		if board[p.pos.y + direction][p.pos.x - 1] != nil && board[p.pos.y + direction][p.pos.x - 1].GetColor() != p.color {
-			validMoves.moves = append(validMoves.moves, Pos{x: p.pos.x - 1, y: p.pos.y + direction})
+		if board[p.Pos.Y+direction][p.Pos.X-1] != nil && board[p.Pos.Y+direction][p.Pos.X-1].GetColor() != p.Color {
+			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
 		}
 		// en passant left
-		if pawn, ok := board[p.pos.y][p.pos.x - 1].(*Pawn); ok && pawn.canBeEnPassanted && pawn.color != p.color {
-			validMoves.moves = append(validMoves.moves, Pos{x: p.pos.x - 1, y: p.pos.y + direction})
+		if pawn, ok := board[p.Pos.Y][p.Pos.X-1].(*Pawn); ok && pawn.CanBeEnPassanted && pawn.Color != p.Color {
+			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
 		}
 	}
 
-	if p.pos.x + 1 < 8 {
+	if p.Pos.X+1 < 8 {
 		// capture right
-		if board[p.pos.y + direction][p.pos.x + 1] != nil && board[p.pos.y + direction][p.pos.x + 1].GetColor() != p.color {
-			validMoves.moves = append(validMoves.moves, Pos{x: p.pos.x + 1, y: p.pos.y + direction})
+		if board[p.Pos.Y+direction][p.Pos.X+1] != nil && board[p.Pos.Y+direction][p.Pos.X+1].GetColor() != p.Color {
+			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
 		}
 		// en passant right
-		if pawn, ok := board[p.pos.y][p.pos.x + 1].(*Pawn); ok && pawn.canBeEnPassanted && pawn.color != p.color {
-			validMoves.moves = append(validMoves.moves, Pos{x: p.pos.x + 1, y: p.pos.y + direction})
+		if pawn, ok := board[p.Pos.Y][p.Pos.X+1].(*Pawn); ok && pawn.CanBeEnPassanted && pawn.Color != p.Color {
+			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
 		}
 	}
 
 	return validMoves
 }
 
-func (p *Piece) GetValidMoves(board [][]Pieces, player Color) ValidMoves {
-	validMoves := ValidMoves{ p: p, moves: []Pos{} }
-	if p.pieceType == ROOK || p.pieceType == QUEEN {
-		for i := p.pos.x + 1; i < 8; i++ {
-			if board[p.pos.y][i] == nil {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: p.pos.y})
-			} else if board[p.pos.y][i].GetColor() != p.color {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: p.pos.y})
-				break
-			} else {
-				break
-			}
-		}
-		for i := p.pos.x - 1; i >= 0; i-- {
-			if board[p.pos.y][i] == nil {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: p.pos.y})
-			} else if board[p.pos.y][i].GetColor() != p.color {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: p.pos.y})
-				break
-			} else {
-				break
-			}
-		}
-		for i := p.pos.y + 1; i < 8; i++ {
-			if board[i][p.pos.x] == nil {
-				validMoves.moves = append(validMoves.moves, Pos{x: p.pos.x, y: i})
-			} else if board[i][p.pos.x].GetColor() != p.color {
-				validMoves.moves = append(validMoves.moves, Pos{x: p.pos.x, y: i})
-				break
-			} else {
-				break
-			}
-		}
-		for i := p.pos.y - 1; i >= 0; i-- {
-			if board[i][p.pos.x] == nil {
-				validMoves.moves = append(validMoves.moves, Pos{x: p.pos.x, y: i})
-			} else if board[i][p.pos.x].GetColor() != p.color {
-				validMoves.moves = append(validMoves.moves, Pos{x: p.pos.x, y: i})
-				break
-			} else {
-				break
-			}
-		}
-	}
-	if p.pieceType == BISHOP || p.pieceType == QUEEN {
-		for i, j := p.pos.x + 1, p.pos.y + 1; i < 8 && j < 8; i, j = i + 1, j + 1 {
-			if board[j][i] == nil {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: j})
-			} else if board[j][i].GetColor() != p.color {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: j})
-				break
-			} else {
-				break
-			}
-		}
-		for i, j := p.pos.x - 1, p.pos.y + 1; i >= 0 && j < 8; i, j = i - 1, j + 1 {
-			if board[j][i] == nil {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: j})
-			} else if board[j][i].GetColor() != p.color {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: j})
-				break
-			} else {
-				break
-			}
-		}
-		for i, j := p.pos.x + 1, p.pos.y - 1; i < 8 && j >= 0; i, j = i + 1, j - 1 {
-			if board[j][i] == nil {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: j})
-			} else if board[j][i].GetColor() != p.color {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: j})
-				break
-			} else {
-				break
-			}
-		}
-		for i, j := p.pos.x - 1, p.pos.y - 1; i >= 0 && j >= 0; i, j = i - 1, j - 1 {
-			if board[j][i] == nil {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: j})
-			} else if board[j][i].GetColor() != p.color {
-				validMoves.moves = append(validMoves.moves, Pos{x: i, y: j})
-				break
-			} else {
-				break
-			}
-		}
-	}
-	if p.pieceType == KNIGHT {
-		knightMoves := []Pos{
-			{x: p.pos.x + 2, y: p.pos.y + 1},
-			{x: p.pos.x + 2, y: p.pos.y - 1},
-			{x: p.pos.x - 2, y: p.pos.y + 1},
-			{x: p.pos.x - 2, y: p.pos.y - 1},
-			{x: p.pos.x + 1, y: p.pos.y + 2},
-			{x: p.pos.x + 1, y: p.pos.y - 2},
-			{x: p.pos.x - 1, y: p.pos.y + 2},
-			{x: p.pos.x - 1, y: p.pos.y - 2},
-		}
-		for _, move := range knightMoves {
-			if move.x >= 0 && move.x < 8 && move.y >= 0 && move.y < 8 {
-				if board[move.y][move.x] == nil {
-					validMoves.moves = append(validMoves.moves, move)
-				} else if board[move.y][move.x].GetColor() != p.color {
-					validMoves.moves = append(validMoves.moves, move)
+func (p *Piece) GetValidMoves(board [][]Pieces) ValidMoves {
+	validMoves := ValidMoves{P: p, Moves: []Pos{}}
+	if p.PieceType == KNIGHT {
+		moves := []Pos{{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -2}, {-1, 2}, {-1, -2}}
+		for _, move := range moves {
+			if p.Pos.X+move.X >= 0 && p.Pos.X+move.X < 8 && p.Pos.Y+move.Y >= 0 && p.Pos.Y+move.Y < 8 {
+				if board[p.Pos.Y+move.Y][p.Pos.X+move.X] == nil || board[p.Pos.Y+move.Y][p.Pos.X+move.X].GetColor() != p.Color {
+					m := Pos{p.Pos.X + move.X, p.Pos.Y + move.Y}
+					validMoves.Moves = append(validMoves.Moves, m)
 				}
 			}
 		}
-	}
-	if p.pieceType == KING {
-		kingMoves := []Pos{
-			{x: p.pos.x + 1, y: p.pos.y},
-			{x: p.pos.x - 1, y: p.pos.y},
-			{x: p.pos.x, y: p.pos.y + 1},
-			{x: p.pos.x, y: p.pos.y - 1},
-			{x: p.pos.x + 1, y: p.pos.y + 1},
-			{x: p.pos.x + 1, y: p.pos.y - 1},
-			{x: p.pos.x - 1, y: p.pos.y + 1},
-			{x: p.pos.x - 1, y: p.pos.y - 1},
-		}
-		// for now king can walk into check
-		for _, move := range kingMoves {
-			if move.x >= 0 && move.x < 8 && move.y >= 0 && move.y < 8 {
-				if board[move.y][move.x] == nil {
-					validMoves.moves = append(validMoves.moves, move)
-				} else if board[move.y][move.x].GetColor() != p.color {
-					validMoves.moves = append(validMoves.moves, move)
+	} else if p.PieceType == KING {
+		moves := []Pos{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}
+		for _, move := range moves {
+			if p.Pos.X+move.X >= 0 && p.Pos.X+move.X < 8 && p.Pos.Y+move.Y >= 0 && p.Pos.Y+move.Y < 8 {
+				if board[p.Pos.Y+move.Y][p.Pos.X+move.X] == nil || board[p.Pos.Y+move.Y][p.Pos.X+move.X].GetColor() != p.Color {
+					m := Pos{p.Pos.X + move.X, p.Pos.Y + move.Y}
+					validMoves.Moves = append(validMoves.Moves, m)
 				}
 			}
 		}
+	} else {
+		var dirs []struct{ dx, dy int }
+		if p.PieceType == ROOK || p.PieceType == QUEEN {
+			dirs = append(dirs, []struct{ dx, dy int }{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}...)
+		}
+		if p.PieceType == BISHOP || p.PieceType == QUEEN {
+			dirs = append(dirs, []struct{ dx, dy int }{{1, 1}, {-1, 1}, {1, -1}, {-1, -1}}...)
+		}
+
+		for _, d := range dirs {
+			for i := 1; i < 8; i++ {
+				X, Y := p.Pos.X+d.dx*i, p.Pos.Y+d.dy*i
+				if X < 0 || X >= 8 || Y < 0 || Y >= 8 {
+					break
+				}
+				if board[Y][X] == nil {
+					validMoves.Moves = append(validMoves.Moves, Pos{X: X, Y: Y})
+				} else {
+					if board[Y][X].GetColor() != p.Color {
+						validMoves.Moves = append(validMoves.Moves, Pos{X: X, Y: Y})
+					}
+					break
+				}
+			}
+		}
+
 	}
 	return validMoves
 }
@@ -235,21 +152,21 @@ func genBoard() [][]Pieces {
 	}
 
 	for i := 0; i < 8; i++ {
-		board[1][i] = &Pawn{pos: Pos{x: i, y: 1}, color: WHITE, firstMove: true, canBeEnPassanted: false}
-		board[6][i] = &Pawn{pos: Pos{x: i, y: 6}, color: BLACK, firstMove: true, canBeEnPassanted: false}
+		board[1][i] = &Pawn{Pos: Pos{X: i, Y: 1}, Color: WHITE, FirstMove: true, CanBeEnPassanted: false}
+		board[6][i] = &Pawn{Pos: Pos{X: i, Y: 6}, Color: BLACK, FirstMove: true, CanBeEnPassanted: false}
 	}
 
-	pieceTypes := []PieceType{ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK}
+	pieceTypes := []PType{ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK}
 	for i, pt := range pieceTypes {
-		board[0][i] = &Piece{pos: Pos{x: i, y: 0}, pieceType: pt, color: WHITE, moved: false}
-		board[7][i] = &Piece{pos: Pos{x: i, y: 7}, pieceType: pt, color: BLACK, moved: false}
+		board[0][i] = &Piece{Pos: Pos{X: i, Y: 0}, PieceType: pt, Color: WHITE, Moved: false}
+		board[7][i] = &Piece{Pos: Pos{X: i, Y: 7}, PieceType: pt, Color: BLACK, Moved: false}
 	}
 
 	return board
 }
 
 // this function will return the list of valid moves for a given player
-func getValidMoves(board [][]Pieces, player Color) []ValidMoves {
+func getValidMoves(board [][]Pieces, player PColor) []ValidMoves {
 	validMoves := []ValidMoves{}
 
 	for i := 0; i < 8; i++ {
@@ -257,15 +174,15 @@ func getValidMoves(board [][]Pieces, player Color) []ValidMoves {
 			if board[i][j] == nil {
 				continue
 			}
-			
-			if piece, ok := board[i][j].(*Piece); ok && piece.color == player {
-				pieceMoves := piece.GetValidMoves(board, player)
-				if len(pieceMoves.moves) > 0 {
+
+			if piece, ok := board[i][j].(*Piece); ok && piece.Color == player {
+				pieceMoves := piece.GetValidMoves(board)
+				if len(pieceMoves.Moves) > 0 {
 					validMoves = append(validMoves, pieceMoves)
 				}
-			} else if pawn, ok := board[i][j].(*Pawn); ok && pawn.color == player {
-				pawnMoves := pawn.GetValidMoves(board, player)
-				if len(pawnMoves.moves) > 0 {
+			} else if pawn, ok := board[i][j].(*Pawn); ok && pawn.Color == player {
+				pawnMoves := pawn.GetValidMoves(board)
+				if len(pawnMoves.Moves) > 0 {
 					validMoves = append(validMoves, pawnMoves)
 				}
 			}
@@ -273,36 +190,4 @@ func getValidMoves(board [][]Pieces, player Color) []ValidMoves {
 	}
 
 	return validMoves
-}
-
-func getPieceName(pieceType PieceType) string {
-	switch pieceType {
-	case ROOK:
-		return "Rook"
-	case KNIGHT:
-		return "Knight"
-	case BISHOP:
-		return "Bishop"
-	case QUEEN:
-		return "Queen"
-	case KING:
-		return "King"
-	default:
-		return "Unknown"
-	}
-}
-
-func main() {
-	board := genBoard()
-	moves := getValidMoves(board, WHITE)
-	for _, move := range moves {
-		if piece, ok := move.p.(*Piece); ok {
-			fmt.Println("Valid moves for", getPieceName(piece.pieceType), "at position:", piece.pos.x, piece.pos.y)
-		} else if pawn, ok := move.p.(*Pawn); ok {
-			fmt.Println("Valid moves for pawn at position:", pawn.pos.x, pawn.pos.y)
-		}
-		for _, m := range move.moves {
-			fmt.Println("  Move to:", m.x, m.y)
-		}
-	}
 }
