@@ -20,6 +20,8 @@ const (
 type Pieces interface {
 	GetColor() PColor
 	GetValidMoves(board [][]Pieces) ValidMoves
+	Move(board [][]Pieces, pos Pos)
+	LightMove(board [][]Pieces, pos Pos)
 }
 
 type Pos struct {
@@ -46,6 +48,9 @@ type ValidMoves struct {
 	Moves []Pos
 }
 
+var blackKing *Piece
+var whiteKing *Piece
+
 func (p *Pawn) GetColor() PColor  { return p.Color }
 func (p *Piece) GetColor() PColor { return p.Color }
 
@@ -60,33 +65,63 @@ func (p *Pawn) GetValidMoves(board [][]Pieces) ValidMoves {
 
 	// forward once
 	if board[p.Pos.Y+direction][p.Pos.X] == nil {
-		validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X, Y: p.Pos.Y + direction})
+		curPos := p.Pos
+		p.LightMove(board, Pos{X: p.Pos.X, Y: p.Pos.Y + direction})
+		if !wouldThisKillMyKing(board, p.Color) {
+			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X, Y: p.Pos.Y + direction})
+		}
+		p.LightMove(board, curPos) // revert move
 	}
 
 	// forward twice
 	if p.FirstMove && board[p.Pos.Y+2*direction][p.Pos.X] == nil && board[p.Pos.Y+direction][p.Pos.X] == nil {
-		validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X, Y: p.Pos.Y + 2*direction})
+		curPos := p.Pos
+		p.LightMove(board, Pos{X: p.Pos.X, Y: p.Pos.Y + 2*direction})
+		if !wouldThisKillMyKing(board, p.Color) {
+			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X, Y: p.Pos.Y + 2*direction})
+		}
+		p.LightMove(board, curPos) // revert move
 	}
 
 	if p.Pos.X-1 >= 0 {
 		// capture left
 		if board[p.Pos.Y+direction][p.Pos.X-1] != nil && board[p.Pos.Y+direction][p.Pos.X-1].GetColor() != p.Color {
-			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
+			curPos := p.Pos
+			p.LightMove(board, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
+			if !wouldThisKillMyKing(board, p.Color) {
+				validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
+			}
+			p.LightMove(board, curPos) // revert move
 		}
 		// en passant left
 		if pawn, ok := board[p.Pos.Y][p.Pos.X-1].(*Pawn); ok && pawn.CanBeEnPassanted && pawn.Color != p.Color {
-			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
+			curPos := p.Pos
+			p.LightMove(board, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
+			if !wouldThisKillMyKing(board, p.Color) {
+				validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
+			}
+			p.LightMove(board, curPos) // revert move
 		}
 	}
 
 	if p.Pos.X+1 < 8 {
 		// capture right
 		if board[p.Pos.Y+direction][p.Pos.X+1] != nil && board[p.Pos.Y+direction][p.Pos.X+1].GetColor() != p.Color {
-			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
+			curPos := p.Pos
+			p.LightMove(board, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
+			if !wouldThisKillMyKing(board, p.Color) {
+				validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
+			}
+			p.LightMove(board, curPos) // revert move
 		}
 		// en passant right
 		if pawn, ok := board[p.Pos.Y][p.Pos.X+1].(*Pawn); ok && pawn.CanBeEnPassanted && pawn.Color != p.Color {
-			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
+			curPos := p.Pos
+			p.LightMove(board, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
+			if !wouldThisKillMyKing(board, p.Color) {
+				validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
+			}
+			p.LightMove(board, curPos) // revert move
 		}
 	}
 
@@ -101,7 +136,12 @@ func (p *Piece) GetValidMoves(board [][]Pieces) ValidMoves {
 			if p.Pos.X+move.X >= 0 && p.Pos.X+move.X < 8 && p.Pos.Y+move.Y >= 0 && p.Pos.Y+move.Y < 8 {
 				if board[p.Pos.Y+move.Y][p.Pos.X+move.X] == nil || board[p.Pos.Y+move.Y][p.Pos.X+move.X].GetColor() != p.Color {
 					m := Pos{p.Pos.X + move.X, p.Pos.Y + move.Y}
-					validMoves.Moves = append(validMoves.Moves, m)
+					curPos := p.Pos
+					p.LightMove(board, m)
+					if !wouldThisKillMyKing(board, p.Color) {
+						validMoves.Moves = append(validMoves.Moves, m)
+					}
+					p.LightMove(board, curPos) // revert move
 				}
 			}
 		}
@@ -111,7 +151,12 @@ func (p *Piece) GetValidMoves(board [][]Pieces) ValidMoves {
 			if p.Pos.X+move.X >= 0 && p.Pos.X+move.X < 8 && p.Pos.Y+move.Y >= 0 && p.Pos.Y+move.Y < 8 {
 				if board[p.Pos.Y+move.Y][p.Pos.X+move.X] == nil || board[p.Pos.Y+move.Y][p.Pos.X+move.X].GetColor() != p.Color {
 					m := Pos{p.Pos.X + move.X, p.Pos.Y + move.Y}
-					validMoves.Moves = append(validMoves.Moves, m)
+					curPos := p.Pos
+					p.LightMove(board, m)
+					if !wouldThisKillMyKing(board, p.Color) {
+						validMoves.Moves = append(validMoves.Moves, m)
+					}
+					p.LightMove(board, curPos) // revert move
 				}
 			}
 		}
@@ -131,10 +176,20 @@ func (p *Piece) GetValidMoves(board [][]Pieces) ValidMoves {
 					break
 				}
 				if board[Y][X] == nil {
-					validMoves.Moves = append(validMoves.Moves, Pos{X: X, Y: Y})
+					curPos := p.Pos
+					p.LightMove(board, Pos{X: X, Y: Y})
+					if !wouldThisKillMyKing(board, p.Color) {
+						validMoves.Moves = append(validMoves.Moves, Pos{X: X, Y: Y})
+					}
+					p.LightMove(board, curPos) // revert move
 				} else {
 					if board[Y][X].GetColor() != p.Color {
-						validMoves.Moves = append(validMoves.Moves, Pos{X: X, Y: Y})
+						curPos := p.Pos
+						p.LightMove(board, Pos{X: X, Y: Y})
+						if !wouldThisKillMyKing(board, p.Color) {
+							validMoves.Moves = append(validMoves.Moves, Pos{X: X, Y: Y})
+						}
+						p.LightMove(board, curPos) // revert move
 					}
 					break
 				}
@@ -143,6 +198,144 @@ func (p *Piece) GetValidMoves(board [][]Pieces) ValidMoves {
 
 	}
 	return validMoves
+}
+
+func (p *Pawn) LightMove(board [][]Pieces, destination Pos) {
+	board[p.Pos.Y][p.Pos.X] = nil
+	p.Pos = destination
+	board[p.Pos.Y][p.Pos.X] = p
+}
+
+func (p *Piece) LightMove(board [][]Pieces, destination Pos) {
+	board[p.Pos.Y][p.Pos.X] = nil
+	p.Pos = destination
+	board[p.Pos.Y][p.Pos.X] = p
+}
+
+func (p *Pawn) Move(board [][]Pieces, destination Pos) {
+	p.LightMove(board, destination)
+	if destination.Y == p.Pos.Y+2 || destination.Y == p.Pos.Y-2 {
+		p.FirstMove = false
+		p.CanBeEnPassanted = true
+	} else {
+		p.FirstMove = false
+		p.CanBeEnPassanted = false
+	}
+}
+
+func (p *Piece) Move(board [][]Pieces, destination Pos) {
+	p.LightMove(board, destination)
+	p.Moved = true
+}
+
+func wouldThisKillMyKing(board [][]Pieces, player PColor) bool {
+	var king *Piece
+	if player == WHITE {
+		king = whiteKing
+	} else {
+		king = blackKing
+	}
+	if king == nil {
+		panic("King not found")
+	}
+
+	// ↑
+	for i := king.Pos.Y + 1; i < 8; i++ {
+		if board[i][king.Pos.X] != nil {
+			if board[i][king.Pos.X].GetColor() == player {
+				break
+			}
+			if piece, ok := board[i][king.Pos.X].(*Piece); ok && (piece.PieceType == ROOK || piece.PieceType == QUEEN) {
+				return true
+			}
+		}
+	}
+	// ↓
+	for i := king.Pos.Y - 1; i >= 0; i-- {
+		if board[i][king.Pos.X] != nil {
+			if board[i][king.Pos.X].GetColor() == player {
+				break
+			}
+			if piece, ok := board[i][king.Pos.X].(*Piece); ok && (piece.PieceType == ROOK || piece.PieceType == QUEEN) {
+				return true
+			}
+		}
+	}
+	// →
+	for i := king.Pos.X + 1; i < 8; i++ {
+		if board[king.Pos.Y][i] != nil {
+			if board[king.Pos.Y][i].GetColor() == player {
+				break
+			}
+			if piece, ok := board[king.Pos.Y][i].(*Piece); ok &&
+				(piece.PieceType == ROOK || piece.PieceType == QUEEN) {
+				return true
+			}
+		}
+	}
+	// ←
+	for i := king.Pos.X - 1; i >= 0; i-- {
+		if board[king.Pos.Y][i] != nil {
+			if board[king.Pos.Y][i].GetColor() == player {
+				break
+			}
+			if piece, ok := board[king.Pos.Y][i].(*Piece); ok &&
+				(piece.PieceType == ROOK || piece.PieceType == QUEEN) {
+				return true
+			}
+		}
+	}
+	// ↗
+	for i, j := king.Pos.X+1, king.Pos.Y+1; i < 8 && j < 8; i, j = i+1, j+1 {
+		if board[j][i] != nil {
+			if board[j][i].GetColor() == player {
+				break
+			}
+			if piece, ok := board[j][i].(*Piece); ok && (piece.PieceType == BISHOP || piece.PieceType == QUEEN) {
+				return true
+			}
+			if pawn, ok := board[j][i].(*Pawn); ok && pawn.Color != player && j == king.Pos.Y+1 && i == king.Pos.X+1 {
+				return true
+			}
+		}
+	}
+	// ↖
+	for i, j := king.Pos.X-1, king.Pos.Y+1; i >= 0 && j < 8; i, j = i-1, j+1 {
+		if board[j][i] != nil {
+			if board[j][i].GetColor() == player {
+				break
+			}
+			if piece, ok := board[j][i].(*Piece); ok && (piece.PieceType == BISHOP || piece.PieceType == QUEEN) {
+				return true
+			}
+			if pawn, ok := board[j][i].(*Pawn); ok && pawn.Color != player && j == king.Pos.Y+1 && i == king.Pos.X-1 {
+				return true
+			}
+		}
+	}
+	// ↘
+	for i, j := king.Pos.X+1, king.Pos.Y-1; i < 8 && j >= 0; i, j = i+1, j-1 {
+		if board[j][i] != nil {
+			if board[j][i].GetColor() == player {
+				break
+			}
+			if piece, ok := board[j][i].(*Piece); ok && (piece.PieceType == BISHOP || piece.PieceType == QUEEN) {
+				return true
+			}
+		}
+	}
+	// ↙
+	for i, j := king.Pos.X-1, king.Pos.Y-1; i >= 0 && j >= 0; i, j = i-1, j-1 {
+		if board[j][i] != nil {
+			if board[j][i].GetColor() == player {
+				break
+			}
+			if piece, ok := board[j][i].(*Piece); ok && (piece.PieceType == BISHOP || piece.PieceType == QUEEN) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func genBoard() [][]Pieces {
@@ -161,7 +354,8 @@ func genBoard() [][]Pieces {
 		board[0][i] = &Piece{Pos: Pos{X: i, Y: 0}, PieceType: pt, Color: WHITE, Moved: false}
 		board[7][i] = &Piece{Pos: Pos{X: i, Y: 7}, PieceType: pt, Color: BLACK, Moved: false}
 	}
-
+	whiteKing = board[0][4].(*Piece)
+	blackKing = board[7][4].(*Piece)
 	return board
 }
 
