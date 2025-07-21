@@ -27,6 +27,8 @@ async function initBoard() {
 
             square.className = "square";
             square.className += (i + j) % 2 === 0 ? " white" : " black";
+            square.x = j;
+            square.y = i;
             row.appendChild(square);
         }
         board.appendChild(row);
@@ -88,9 +90,12 @@ interact(".target")
         ondrop: function (event) {
             event.target.appendChild(event.relatedTarget);
             event.relatedTarget.style.transform = "none";
-            let pos = pieceData.get(event.relatedTarget);
-            pos.dx = 0;
-            pos.dy = 0;
+            let piece = pieceData.get(event.relatedTarget);
+            sendMoveToServer(piece, { X: event.target.x, Y: event.target.y });
+            piece.dx = 0;
+            piece.dy = 0;
+            piece.x = event.target.x;
+            piece.y = event.target.y;
         }
     })
 
@@ -103,7 +108,6 @@ function addTarget(event) {
         if (data.x == m.P.Pos.X && data.y == m.P.Pos.Y) {
             for (let j = 0; j < m.Moves.length; j++) {
                 let coords = m.Moves[j].X + m.Moves[j].Y * 8
-                console.log(coords)
                 board.getElementsByClassName("square")[coords].classList.add("target");
             }
         }
@@ -115,10 +119,40 @@ function removeTarget() {
     Array.from(targets).forEach(el => el.classList.remove("target"));
 }
 
+function sendMoveToServer(piece, target) {
+    let p;
+    let destination;
+    for (let i = 0; i < moveList.length; i++) {
+        let m = moveList[i]
+        if (piece.x == m.P.Pos.X && piece.y == m.P.Pos.Y) {
+            p = m.P
+            for (let j = 0; j < m.Moves.length; j++) {
+                if (m.Moves[j].X == target.X && m.Moves[j].Y == target.Y) {
+                    destination = m.Moves[j];
+                    break;
+                }
+            }
+            break;
+        }
+    }
+    fetch("movePiece", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ piece: p.Pos, move: destination })
+    }).then(response => response.json())
+        .then(data => {
+            console.log("Move successful:", data);
+            // Update the board or handle the response as needed
+        })
+        .catch(error => console.error("Error:", error));
+}
+
 let pieceData = new Map();
 let boardSetup;
 let boardSize;
 let playerColor;
-let moveList
+let moveList;
 let board = document.getElementById("board");
 initBoard();

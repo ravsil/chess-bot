@@ -19,6 +19,7 @@ const (
 
 type Pieces interface {
 	GetColor() PColor
+	GetPos() Pos
 	GetValidMoves(board [][]Pieces) ValidMoves
 	Move(board [][]Pieces, pos Pos)
 	LightMove(board [][]Pieces, pos Pos)
@@ -54,6 +55,9 @@ var whiteKing *Piece
 func (p *Pawn) GetColor() PColor  { return p.Color }
 func (p *Piece) GetColor() PColor { return p.Color }
 
+func (p *Pawn) GetPos() Pos  { return p.Pos }
+func (p *Piece) GetPos() Pos { return p.Pos }
+
 func (p *Pawn) GetValidMoves(board [][]Pieces) ValidMoves {
 	validMoves := ValidMoves{P: p, Moves: []Pos{}}
 	var direction int
@@ -68,7 +72,7 @@ func (p *Pawn) GetValidMoves(board [][]Pieces) ValidMoves {
 		curPos := p.Pos
 		p.LightMove(board, Pos{X: p.Pos.X, Y: p.Pos.Y + direction})
 		if !wouldThisKillMyKing(board, p.Color) {
-			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X, Y: p.Pos.Y + direction})
+			validMoves.Moves = append(validMoves.Moves, Pos{X: curPos.X, Y: curPos.Y + direction})
 		}
 		p.LightMove(board, curPos) // revert move
 	}
@@ -78,7 +82,7 @@ func (p *Pawn) GetValidMoves(board [][]Pieces) ValidMoves {
 		curPos := p.Pos
 		p.LightMove(board, Pos{X: p.Pos.X, Y: p.Pos.Y + 2*direction})
 		if !wouldThisKillMyKing(board, p.Color) {
-			validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X, Y: p.Pos.Y + 2*direction})
+			validMoves.Moves = append(validMoves.Moves, Pos{X: curPos.X, Y: curPos.Y + 2*direction})
 		}
 		p.LightMove(board, curPos) // revert move
 	}
@@ -89,7 +93,7 @@ func (p *Pawn) GetValidMoves(board [][]Pieces) ValidMoves {
 			curPos := p.Pos
 			p.LightMove(board, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
 			if !wouldThisKillMyKing(board, p.Color) {
-				validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
+				validMoves.Moves = append(validMoves.Moves, Pos{X: curPos.X - 1, Y: curPos.Y + direction})
 			}
 			p.LightMove(board, curPos) // revert move
 		}
@@ -98,7 +102,7 @@ func (p *Pawn) GetValidMoves(board [][]Pieces) ValidMoves {
 			curPos := p.Pos
 			p.LightMove(board, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
 			if !wouldThisKillMyKing(board, p.Color) {
-				validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X - 1, Y: p.Pos.Y + direction})
+				validMoves.Moves = append(validMoves.Moves, Pos{X: curPos.X - 1, Y: curPos.Y + direction})
 			}
 			p.LightMove(board, curPos) // revert move
 		}
@@ -110,7 +114,7 @@ func (p *Pawn) GetValidMoves(board [][]Pieces) ValidMoves {
 			curPos := p.Pos
 			p.LightMove(board, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
 			if !wouldThisKillMyKing(board, p.Color) {
-				validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
+				validMoves.Moves = append(validMoves.Moves, Pos{X: curPos.X + 1, Y: curPos.Y + direction})
 			}
 			p.LightMove(board, curPos) // revert move
 		}
@@ -119,7 +123,7 @@ func (p *Pawn) GetValidMoves(board [][]Pieces) ValidMoves {
 			curPos := p.Pos
 			p.LightMove(board, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
 			if !wouldThisKillMyKing(board, p.Color) {
-				validMoves.Moves = append(validMoves.Moves, Pos{X: p.Pos.X + 1, Y: p.Pos.Y + direction})
+				validMoves.Moves = append(validMoves.Moves, Pos{X: curPos.X + 1, Y: curPos.Y + direction})
 			}
 			p.LightMove(board, curPos) // revert move
 		}
