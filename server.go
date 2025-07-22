@@ -2,11 +2,13 @@ package main
 
 import (
 	"chess/bot"
+	"chess/game"
 	"fmt"
 	"net/http"
 )
 
 func main() {
+	game.InitRanged()
 	fmt.Println("Serving on http://0.0.0.0:8080")
 
 	http.HandleFunc("/", bot.Root)
