@@ -4,6 +4,8 @@
 
 package game
 
+import "fmt"
+
 type Direction int
 
 const (
@@ -16,12 +18,25 @@ const (
 	WEST
 	NORTHWEST
 )
+const LEFT_BORDER uint64 = 0b00000001_00000001_00000001_00000001_00000001_00000001_00000001_00000001
+const RIGHT_BORDER uint64 = 0b10000000_10000000_10000000_10000000_10000000_10000000_10000000_10000000
+const DOUBLE_LEFT_BORDER uint64 = (LEFT_BORDER | (LEFT_BORDER << 1))
+const DOUBLE_RIGHT_BORDER uint64 = (RIGHT_BORDER | (RIGHT_BORDER >> 1))
 
 var rayAttacks [8][64]uint64
 var ms1bTable [256]int
 
 func SetBit(bitboard *uint64, square int) {
 	*bitboard |= (1 << square)
+}
+
+func GetSingleBit(bb uint64) (int, error) {
+	for i := 0; i < 64; i++ {
+		if (bb>>i)&1 != 0 {
+			return i, nil
+		}
+	}
+	return -1, fmt.Errorf("no bit set in bitboard")
 }
 
 func GetBits(bb uint64) []int {

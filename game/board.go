@@ -31,35 +31,45 @@ func (b *Board) InitBoard() {
 	b.BlackKing = 0b00010000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 }
 
+func (b *Board) GetPieces(c PColor) uint64 {
+	if c == WHITE {
+		return b.WhitePawns | b.WhiteRooks | b.WhiteKnights | b.WhiteBishops | b.WhiteQueens | b.WhiteKing
+	}
+	return b.BlackPawns | b.BlackRooks | b.BlackKnights | b.BlackBishops | b.BlackQueens | b.BlackKing
+}
+
+func (b *Board) GetOcupiedSquares() uint64 {
+	return b.WhitePawns | b.BlackPawns | b.WhiteRooks | b.BlackRooks |
+		b.WhiteKnights | b.BlackKnights | b.WhiteBishops | b.BlackBishops |
+		b.WhiteQueens | b.BlackQueens | b.WhiteKing | b.BlackKing
+}
+
 // returns the squares black pieces are attacking
 func (b *Board) GetWhiteInfluence() uint64 {
 	influence := uint64(0)
-	const leftBorder uint64 = 0b00000001_00000001_00000001_00000001_00000001_00000001_00000001_00000001
-	const rightBorder uint64 = 0b10000000_10000000_10000000_10000000_10000000_10000000_10000000_10000000
-	whitePieces := b.WhitePawns | b.WhiteRooks | b.WhiteKnights | b.WhiteBishops | b.WhiteQueens | b.WhiteKing
-	blackPieces := b.BlackPawns | b.BlackRooks | b.BlackKnights | b.BlackBishops | b.BlackQueens | b.BlackKing
-	allPieces := whitePieces | blackPieces
+	whitePieces := b.GetPieces(WHITE)
+	allPieces := b.GetOcupiedSquares()
 
-	influence |= (b.WhitePawns << 9) & ^leftBorder  // ↖
-	influence |= (b.WhitePawns << 7) & ^rightBorder // ↗
+	influence |= (b.WhitePawns << 9) & ^LEFT_BORDER  // ↖
+	influence |= (b.WhitePawns << 7) & ^RIGHT_BORDER // ↗
 
 	influence |= (b.WhiteKing << 8) | // ↑
 		(b.WhiteKing >> 8) | // ↓
-		((b.WhiteKing << 1) & ^leftBorder) | // ←
-		((b.WhiteKing >> 1) & ^rightBorder) | // →
-		((b.WhiteKing << 9) & ^leftBorder) | // ↖
-		((b.WhiteKing << 7) & ^rightBorder) | // ↗
-		((b.WhiteKing >> 7) & ^leftBorder) | // ↙
-		((b.WhiteKing >> 9) & ^rightBorder) // ↘
+		((b.WhiteKing << 1) & ^LEFT_BORDER) | // ←
+		((b.WhiteKing >> 1) & ^RIGHT_BORDER) | // →
+		((b.WhiteKing << 9) & ^LEFT_BORDER) | // ↖
+		((b.WhiteKing << 7) & ^RIGHT_BORDER) | // ↗
+		((b.WhiteKing >> 7) & ^LEFT_BORDER) | // ↙
+		((b.WhiteKing >> 9) & ^RIGHT_BORDER) // ↘
 
-	influence |= (b.WhiteKnights << 15) & ^leftBorder  // ↓↓←
-	influence |= (b.WhiteKnights << 17) & ^rightBorder // ↓↓→
-	influence |= (b.WhiteKnights >> 15) & ^rightBorder // ↑↑→
-	influence |= (b.WhiteKnights >> 17) & ^leftBorder  // ↑↑←
-	influence |= (b.WhiteKnights << 6) & ^leftBorder   // ←←↓
-	influence |= (b.WhiteKnights << 10) & ^rightBorder // →→
-	influence |= (b.WhiteKnights >> 6) & ^rightBorder  // →→↑
-	influence |= (b.WhiteKnights >> 10) & ^leftBorder  // ←←
+	influence |= (b.WhiteKnights << 15) & ^LEFT_BORDER         // ↓↓←
+	influence |= (b.WhiteKnights << 17) & ^RIGHT_BORDER        // ↓↓→
+	influence |= (b.WhiteKnights >> 15) & ^RIGHT_BORDER        // ↑↑→
+	influence |= (b.WhiteKnights >> 17) & ^LEFT_BORDER         // ↑↑←
+	influence |= (b.WhiteKnights << 6) & ^DOUBLE_LEFT_BORDER   // ←←↓
+	influence |= (b.WhiteKnights << 10) & ^DOUBLE_RIGHT_BORDER // →→↓
+	influence |= (b.WhiteKnights >> 6) & ^DOUBLE_RIGHT_BORDER  // →→↑
+	influence |= (b.WhiteKnights >> 10) & ^DOUBLE_LEFT_BORDER  // ←←↑
 
 	for _, bishop := range GetBits(b.WhiteBishops) {
 		influence |= BishopAttacks(allPieces, bishop)
@@ -79,32 +89,30 @@ func (b *Board) GetWhiteInfluence() uint64 {
 
 func (b *Board) GetBlackInfluence() uint64 {
 	influence := uint64(0)
-	const leftBorder uint64 = 0b00000001_00000001_00000001_00000001_00000001_00000001_00000001_00000001
-	const rightBorder uint64 = 0b10000000_10000000_10000000_10000000_10000000_10000000_10000000_10000000
-	whitePieces := b.WhitePawns | b.WhiteRooks | b.WhiteKnights | b.WhiteBishops | b.WhiteQueens | b.WhiteKing
-	blackPieces := b.BlackPawns | b.BlackRooks | b.BlackKnights | b.BlackBishops | b.BlackQueens | b.BlackKing
-	allPieces := whitePieces | blackPieces
 
-	influence |= (b.BlackPawns << 9) & ^leftBorder  // ↖
-	influence |= (b.BlackPawns << 7) & ^rightBorder // ↗
+	blackPieces := b.GetPieces(BLACK)
+	allPieces := b.GetOcupiedSquares()
+
+	influence |= (b.BlackPawns >> 9) & ^LEFT_BORDER  // ↖
+	influence |= (b.BlackPawns >> 7) & ^RIGHT_BORDER // ↗
 
 	influence |= (b.BlackKing << 8) | // ↑
 		(b.BlackKing >> 8) | // ↓
-		((b.BlackKing << 1) & ^leftBorder) | // ←
-		((b.BlackKing >> 1) & ^rightBorder) | // →
-		((b.BlackKing << 9) & ^leftBorder) | // ↖
-		((b.BlackKing << 7) & ^rightBorder) | // ↗
-		((b.BlackKing >> 7) & ^leftBorder) | // ↙
-		((b.BlackKing >> 9) & ^rightBorder) // ↘
+		((b.BlackKing << 1) & ^LEFT_BORDER) | // ←
+		((b.BlackKing >> 1) & ^RIGHT_BORDER) | // →
+		((b.BlackKing << 9) & ^LEFT_BORDER) | // ↖
+		((b.BlackKing << 7) & ^RIGHT_BORDER) | // ↗
+		((b.BlackKing >> 7) & ^LEFT_BORDER) | // ↙
+		((b.BlackKing >> 9) & ^RIGHT_BORDER) // ↘
 
-	influence |= (b.BlackKnights << 15) & ^leftBorder  // ↓↓←
-	influence |= (b.BlackKnights << 17) & ^rightBorder // ↓↓→
-	influence |= (b.BlackKnights >> 15) & ^rightBorder // ↑↑→
-	influence |= (b.BlackKnights >> 17) & ^leftBorder  // ↑↑←
-	influence |= (b.BlackKnights << 6) & ^leftBorder   // ←←↓
-	influence |= (b.BlackKnights << 10) & ^rightBorder // →→
-	influence |= (b.BlackKnights >> 6) & ^rightBorder  // →→↑
-	influence |= (b.BlackKnights >> 10) & ^leftBorder  // ←←
+	influence |= (b.BlackKnights << 15) & ^LEFT_BORDER  // ↓↓←
+	influence |= (b.BlackKnights << 17) & ^RIGHT_BORDER // ↓↓→
+	influence |= (b.BlackKnights >> 15) & ^RIGHT_BORDER // ↑↑→
+	influence |= (b.BlackKnights >> 17) & ^LEFT_BORDER  // ↑↑←
+	influence |= (b.BlackKnights << 6) & ^LEFT_BORDER   // ←←↓
+	influence |= (b.BlackKnights << 10) & ^RIGHT_BORDER // →→
+	influence |= (b.BlackKnights >> 6) & ^RIGHT_BORDER  // →→↑
+	influence |= (b.BlackKnights >> 10) & ^LEFT_BORDER  // ←←
 
 	for _, bishop := range GetBits(b.BlackBishops) {
 		influence |= BishopAttacks(allPieces, bishop)
