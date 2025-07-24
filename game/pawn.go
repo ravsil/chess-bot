@@ -24,7 +24,7 @@ func (p *Pawn) GetValidMoves(b Board) uint64 {
 	}
 
 	forward := p.Pos << (8 + direction)
-	canForward := WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, forward, b, p.Color)
+	canForward := WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, forward, b, PAWN, p.Color)
 	if forward&ocupied == 0 && canForward {
 		moves |= forward
 	}
@@ -37,33 +37,25 @@ func (p *Pawn) GetValidMoves(b Board) uint64 {
 	}
 
 	left := (forward << 1) & ^LEFT_BORDER
-	if left&enemyPieces != 0 && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, left, b, p.Color) {
+	if left&enemyPieces != 0 && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, left, b, PAWN, p.Color) {
 		moves |= left
 	}
 	right := (forward >> 1) & ^RIGHT_BORDER
-	if right&enemyPieces != 0 && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, right, b, p.Color) {
+	if right&enemyPieces != 0 && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, right, b, PAWN, p.Color) {
 		moves |= right
 	}
 	// TODO: en-passant
 	return moves
 }
 
-func (p *Pawn) Move(newPos int, b *Board) {
+func (p *Pawn) Move(newPos uint64, b *Board) {
 	if !p.Moved {
 		p.Moved = true
 	}
-	dest := uint64(0)
-	SetBit(&dest, newPos)
-
-	if (p.Pos<<16)&dest != 0 || (p.Pos>>16)&dest != 0 {
+	if (p.Pos<<16)&newPos != 0 || (p.Pos>>16)&newPos != 0 {
 		p.CanBeEnPassanted = true
 	}
-	pos, err := GetSingleBit(p.Pos)
 
-	if err != nil {
-		panic("Error Moving Piece")
-	}
-
-	b.Update(pos, newPos)
-	p.Pos = dest
+	b.Update(p.Pos, newPos, PAWN, p.Color)
+	p.Pos = newPos
 }

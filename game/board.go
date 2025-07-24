@@ -130,49 +130,39 @@ func (b *Board) GetBlackInfluence() uint64 {
 	return influence
 }
 
-func (b *Board) Update(pos int, newPos int) {
-	if pos < 0 || pos > 63 || newPos < 0 || newPos > 63 {
-		return
+func (b *Board) Update(pos uint64, newPos uint64, piece PType, color PColor) {
+	var target *uint64
+	if color == WHITE {
+		switch piece {
+		case KING:
+			target = &b.WhiteKing
+		case QUEEN:
+			target = &b.WhiteQueens
+		case ROOK:
+			target = &b.WhiteRooks
+		case BISHOP:
+			target = &b.WhiteBishops
+		case KNIGHT:
+			target = &b.WhiteKnights
+		case PAWN:
+			target = &b.WhitePawns
+		}
+	} else {
+		switch piece {
+		case KING:
+			target = &b.BlackKing
+		case QUEEN:
+			target = &b.BlackQueens
+		case ROOK:
+			target = &b.BlackRooks
+		case BISHOP:
+			target = &b.BlackBishops
+		case KNIGHT:
+			target = &b.BlackKnights
+		case PAWN:
+			target = &b.BlackPawns
+		}
 	}
-
-	switch {
-	case b.WhitePawns&(1<<pos) != 0:
-		b.WhitePawns &^= (1 << pos)
-		b.WhitePawns |= (1 << newPos)
-	case b.BlackPawns&(1<<pos) != 0:
-		b.BlackPawns &^= (1 << pos)
-		b.BlackPawns |= (1 << newPos)
-	case b.WhiteRooks&(1<<pos) != 0:
-		b.WhiteRooks &^= (1 << pos)
-		b.WhiteRooks |= (1 << newPos)
-	case b.BlackRooks&(1<<pos) != 0:
-		b.BlackRooks &^= (1 << pos)
-		b.BlackRooks |= (1 << newPos)
-	case b.WhiteKnights&(1<<pos) != 0:
-		b.WhiteKnights &^= (1 << pos)
-		b.WhiteKnights |= (1 << newPos)
-	case b.BlackKnights&(1<<pos) != 0:
-		b.BlackKnights &^= (1 << pos)
-		b.BlackKnights |= (1 << newPos)
-	case b.WhiteBishops&(1<<pos) != 0:
-		b.WhiteBishops &^= (1 << pos)
-		b.WhiteBishops |= (1 << newPos)
-	case b.BlackBishops&(1<<pos) != 0:
-		b.BlackBishops &^= (1 << pos)
-		b.BlackBishops |= (1 << newPos)
-	case b.WhiteQueens&(1<<pos) != 0:
-		b.WhiteQueens &^= (1 << pos)
-		b.WhiteQueens |= (1 << newPos)
-	case b.BlackQueens&(1<<pos) != 0:
-		b.BlackQueens &^= (1 << pos)
-		b.BlackQueens |= (1 << newPos)
-	case b.WhiteKing&(1<<pos) != 0:
-		b.WhiteKing &^= (1 << pos)
-		b.WhiteKing |= (1 << newPos)
-	case b.BlackKing&(1<<pos) != 0:
-		b.BlackKing &^= (1 << pos)
-		b.BlackKing |= (1 << newPos)
-	default:
-		return
-	}
+	*target &^= pos
+	*target |= newPos
 }

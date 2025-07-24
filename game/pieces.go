@@ -23,24 +23,13 @@ type Piece interface {
 	GetType() PType
 	GetPos() uint64
 	GetValidMoves(b Board) uint64
-	Move(newPos int, b *Board)
+	Move(newPos uint64, b *Board)
 }
 
-func WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(cur uint64, desire uint64, realBoard Board, color PColor) bool {
+func WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(cur uint64, desire uint64, realBoard Board, piece PType, color PColor) bool {
 	b := realBoard
-	if desire == 0 {
-		return true
-	}
-	c, err := GetSingleBit(cur)
-	if err != nil {
-		panic("Current piece position Could not be found")
-	}
-	d, err := GetSingleBit(desire)
-	if err != nil {
-		panic("Current piece position Could not be found")
-	}
 
-	b.Update(c, d)
+	b.Update(cur, desire, piece, color)
 
 	if color == WHITE {
 		if b.GetBlackInfluence()&b.WhiteKing != 0 {
