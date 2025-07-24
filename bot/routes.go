@@ -1,18 +1,20 @@
 package bot
 
 import (
+	. "chess/game"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
 )
 
-var board [][]Pieces = nil
+var game Game
 var playerColor PColor = WHITE
 
 // Print the board with Unicode chess symbols
 func printBoard() {
 	// Unicode symbols for chess pieces
+	movelist := game.GetValidMoves(playerColor)
 	pieceSymbols := map[[2]int]string{
 		// White
 		{int(WHITE), int(ROOK)}:   "♖",
@@ -20,41 +22,63 @@ func printBoard() {
 		{int(WHITE), int(BISHOP)}: "♗",
 		{int(WHITE), int(QUEEN)}:  "♕",
 		{int(WHITE), int(KING)}:   "♔",
+		{int(WHITE), int(PAWN)}:   "♙",
 		// Black
 		{int(BLACK), int(ROOK)}:   "♜",
 		{int(BLACK), int(KNIGHT)}: "♞",
 		{int(BLACK), int(BISHOP)}: "♝",
 		{int(BLACK), int(QUEEN)}:  "♛",
 		{int(BLACK), int(KING)}:   "♚",
+		{int(BLACK), int(PAWN)}:   "♟",
 	}
-	pawnSymbols := map[PColor]string{
-		WHITE: "♙",
-		BLACK: "♟",
-	}
+
 	fmt.Print("   a b c d e f g h\n")
-	for y := 0; y < 8; y++ {
-		fmt.Printf("%d  ", 8-y)
-		for x := 0; x < 8; x++ {
-			piece := board[y][x]
-			if piece == nil {
-				fmt.Print(". ")
-				continue
-			}
-			switch p := piece.(type) {
-			case *Piece:
-				symbol, ok := pieceSymbols[[2]int{int(p.Color), int(p.PieceType)}]
-				if ok {
-					fmt.Printf("%s ", symbol)
-				} else {
-					fmt.Print("? ")
+	for rank := 0; rank < 8; rank++ {
+		fmt.Printf("%d  ", 8-rank)
+		for file := 0; file < 8; file++ {
+			// Convert rank/file to bit position (0-63)
+			bitPos := rank*8 + file
+			square := uint64(1) << bitPos
+
+			// Check each piece type and color
+			symbol := ". "
+			if game.Board.WhitePawns&square != 0 {
+				symbol = pieceSymbols[[2]int{int(WHITE), int(PAWN)}] + " "
+			} else if game.Board.BlackPawns&square != 0 {
+				symbol = pieceSymbols[[2]int{int(BLACK), int(PAWN)}] + " "
+			} else if game.Board.WhiteRooks&square != 0 {
+				symbol = pieceSymbols[[2]int{int(WHITE), int(ROOK)}] + " "
+			} else if game.Board.BlackRooks&square != 0 {
+				symbol = pieceSymbols[[2]int{int(BLACK), int(ROOK)}] + " "
+			} else if game.Board.WhiteKnights&square != 0 {
+				symbol = pieceSymbols[[2]int{int(WHITE), int(KNIGHT)}] + " "
+			} else if game.Board.BlackKnights&square != 0 {
+				symbol = pieceSymbols[[2]int{int(BLACK), int(KNIGHT)}] + " "
+			} else if game.Board.WhiteBishops&square != 0 {
+				symbol = pieceSymbols[[2]int{int(WHITE), int(BISHOP)}] + " "
+			} else if game.Board.BlackBishops&square != 0 {
+				symbol = pieceSymbols[[2]int{int(BLACK), int(BISHOP)}] + " "
+			} else if game.Board.WhiteQueens&square != 0 {
+				symbol = pieceSymbols[[2]int{int(WHITE), int(QUEEN)}] + " "
+			} else if game.Board.BlackQueens&square != 0 {
+				symbol = pieceSymbols[[2]int{int(BLACK), int(QUEEN)}] + " "
+			} else if game.Board.WhiteKing&square != 0 {
+				symbol = pieceSymbols[[2]int{int(WHITE), int(KING)}] + " "
+			} else if game.Board.BlackKing&square != 0 {
+				symbol = pieceSymbols[[2]int{int(BLACK), int(KING)}] + " "
+			} else {
+				// Check if this square is a valid move destination
+				for _, validMoves := range movelist {
+					if validMoves&square != 0 {
+						symbol = "v "
+						break
+					}
 				}
-			case *Pawn:
-				fmt.Printf("%s ", pawnSymbols[p.Color])
-			default:
-				fmt.Print("? ")
 			}
+
+			fmt.Print(symbol)
 		}
-		fmt.Printf(" %d\n", 8-y)
+		fmt.Printf(" %d\n", 8-rank)
 	}
 	fmt.Print("   a b c d e f g h\n")
 }
@@ -74,7 +98,7 @@ func GetBoard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	board = genBoard()
+	game.NewGame()
 	if rand.Intn(2) == 0 {
 		playerColor = WHITE
 	} else {
@@ -82,7 +106,7 @@ func GetBoard(w http.ResponseWriter, r *http.Request) {
 	}
 	printBoard()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(board)
+	json.NewEncoder(w).Encode(game.Board)
 }
 
 func GetMoves(w http.ResponseWriter, r *http.Request) {
@@ -91,15 +115,11 @@ func GetMoves(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if board == nil {
-		http.Error(w, "Board not initialized", http.StatusInternalServerError)
-		return
-	}
-	validMoves := getValidMoves(board, playerColor)
+	validMoves := game.GetValidMoves(playerColor)
 
 	response := struct {
-		ValidMoves  []ValidMoves `json:"validMoves"`
-		PlayerColor PColor       `json:"playerColor"`
+		ValidMoves  map[uint64]uint64 `json:"validMoves"`
+		PlayerColor PColor            `json:"playerColor"`
 	}{
 		ValidMoves:  validMoves,
 		PlayerColor: playerColor,
@@ -116,35 +136,27 @@ func MovePiece(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Piece Pos `json:"piece"`
-		Move  Pos `json:"move"`
+		Piece uint64 `json:"piece"`
+		Move  uint64 `json:"move"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-	if board == nil {
-		http.Error(w, "Board not initialized", http.StatusInternalServerError)
-		return
-	}
 
-	validMoves := getValidMoves(board, playerColor)
-	found := false
-	for _, validMove := range validMoves {
-		if validMove.P.GetPos() == req.Piece {
-			for _, move := range validMove.Moves {
-				if move == req.Move {
-					validMove.P.Move(board, req.Move)
-					found = true
-				}
-			}
+	validMoves := game.GetValidMoves(playerColor)
+	if v, ok := validMoves[req.Piece]; ok && v&req.Move != 0 {
+		err := game.Move(req.Piece, req.Move, playerColor)
+		if err != nil {
+			http.Error(w, "Invalid move", http.StatusBadRequest)
+			return
 		}
-	}
-	if !found {
+	} else {
 		http.Error(w, "Invalid move", http.StatusBadRequest)
 		return
 	}
+
 	printBoard()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Move received"})
+	json.NewEncoder(w).Encode(game)
 }

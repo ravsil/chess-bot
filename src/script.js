@@ -1,10 +1,13 @@
 const BLACK = 0, WHITE = 1;
-const PIECE_NAMES = ["rook", "knight", "bishop", "queen", "king"];
+// BigInt cannot be converted to json normally
+BigInt.prototype.toJSON = function () {
+    return JSON.rawJSON(this.toString());
+};
+
 
 async function initBoard() {
     const response = await fetch("getBoard");
     boardSetup = await response.json();
-    boardSize = parseInt(boardSetup.length);
 
     const response2nd = await fetch("getMoves");
     let r2json = await response2nd.json()
@@ -20,9 +23,10 @@ async function initBoard() {
             let pieceName = getPiece(boardSetup, i, j);
             if (pieceName != null) {
                 let piece = document.createElement("div");
-                piece.className = "piece" + pieceName;
+                piece.classList.add("piece");
+                piece.classList.add(pieceName);
                 square.appendChild(piece);
-                pieceData.set(piece, { x: j, y: i, dx: 0, dy: 0, color: boardSetup[i][j].Color });
+                pieceData.set(piece, { x: j, y: i, dx: 0, dy: 0, color: pieceName[0] == "w" ? WHITE : BLACK });
             }
 
             square.className = "square";
@@ -36,29 +40,22 @@ async function initBoard() {
 }
 
 function getPiece(boardSetup, row, col) {
-    if (boardSetup[row][col] === null) {
-        return null;
-    }
-    let color = boardSetup[row][col].Color;
-    if (color == BLACK) {
-        if (boardSetup[row][col].PieceType == undefined) {
-            return " black-pawn";
-        } else {
-            return " black-" + PIECE_NAMES[boardSetup[row][col].PieceType];
-        }
-    } else {
-        if (boardSetup[row][col].PieceType == undefined) {
-            return " white-pawn";
-        } else {
-            return " white-" + PIECE_NAMES[boardSetup[row][col].PieceType];
+    for (let key in boardSetup) {
+        let bitboard = BigInt(boardSetup[key]);
+        let pos = BigInt((boardSize * boardSize) - (col + row * boardSize) - 1);
+        if ((bitboard >> pos) & 1n) {
+            let name = key.toLowerCase().replace(/s$/, "");
+            return name;
         }
     }
+    return null;
 }
 
 interact(".piece").draggable({
     listeners: {
         start(event) {
             removeTarget()
+            event.target.classList.add("dragged");
             addTarget(event)
         },
         move(event) {
@@ -73,6 +70,7 @@ interact(".piece").draggable({
         },
         end(event) {
             removeTarget()
+            event.target.classList.remove("dragged");
             if (!event.dropzone) {
                 event.target.style.transform = "none";
                 let data = pieceData.get(event.target);
@@ -103,11 +101,23 @@ interact(".piece").on("tap", addTarget);
 
 function addTarget(event) {
     let data = pieceData.get(event.target);
-    for (let i = 0; i < moveList.length; i++) {
-        let m = moveList[i]
-        if (data.x == m.P.Pos.X && data.y == m.P.Pos.Y) {
-            for (let j = 0; j < m.Moves.length; j++) {
-                let coords = m.Moves[j].X + m.Moves[j].Y * 8
+    let pos = BigInt(1) << BigInt(data.x + data.y * boardSize)
+    let moves;
+    for (key in moveList) {
+        if (key == pos) {
+            moves = BigInt(moveList[key])
+            console.log(key)
+            break;
+        }
+    }
+    if (!moves) {
+        return;
+    }
+    for (let i = 0; i < boardSize; i++) {
+        for (let j = 0; j < boardSize; j++) {
+            let targetPos = BigInt(1) << BigInt(j + i * boardSize);
+            if ((moves & targetPos) != 0n) {
+                let coords = j + i * boardSize;
                 board.getElementsByClassName("square")[coords].classList.add("target");
             }
         }
@@ -120,30 +130,22 @@ function removeTarget() {
 }
 
 function sendMoveToServer(piece, target) {
-    let p;
-    let destination;
-    for (let i = 0; i < moveList.length; i++) {
-        let m = moveList[i]
-        if (piece.x == m.P.Pos.X && piece.y == m.P.Pos.Y) {
-            p = m.P
-            for (let j = 0; j < m.Moves.length; j++) {
-                if (m.Moves[j].X == target.X && m.Moves[j].Y == target.Y) {
-                    destination = m.Moves[j];
-                    break;
-                }
-            }
-            break;
-        }
-    }
+    let pos = BigInt(1) << BigInt(piece.x + piece.y * boardSize)
+    let destination = BigInt(1) << BigInt(target.X + target.Y * boardSize);
     fetch("movePiece", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
-        body: JSON.stringify({ piece: p.Pos, move: destination })
+        body: JSON.stringify({ piece: pos, move: destination })
     }).then(response => response.json())
         .then(data => {
             console.log("Move successful:", data);
+            if (playerColor == WHITE) {
+                moveList = data.ValidWhiteMoves
+            } else {
+                moveList = data.ValidBlackMoves
+            }
             // Update the board or handle the response as needed
         })
         .catch(error => console.error("Error:", error));
@@ -151,7 +153,7 @@ function sendMoveToServer(piece, target) {
 
 let pieceData = new Map();
 let boardSetup;
-let boardSize;
+const boardSize = 8;
 let playerColor;
 let moveList;
 let board = document.getElementById("board");

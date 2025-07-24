@@ -93,6 +93,7 @@ func (g *Game) Move(pos uint64, newPos uint64, color PColor) error {
 	for _, p := range it {
 		if p.GetPos() == pos {
 			p.Move(newPos, &g.Board)
+			go g.ChangeTurn()
 			g.RemovePiece(newPos, c) // go ?
 			return nil
 		}
@@ -116,4 +117,16 @@ func (g *Game) RemovePiece(pos uint64, color PColor) error {
 		}
 	}
 	return fmt.Errorf("piece not found at position %d", pos)
+}
+
+func (g *Game) ChangeTurn() {
+	if g.CurrentTurn == WHITE {
+		g.CurrentTurn = BLACK
+	} else {
+		g.CurrentTurn = WHITE
+	}
+}
+
+func (g *Game) GetTurn() PColor {
+	return g.CurrentTurn
 }

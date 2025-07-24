@@ -85,11 +85,16 @@ body::after {
 }
 
 .piece {
+    z-index: 2;
     width: 4vw;
     height: 4vw;
     background-size: cover !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
+}
+
+.dragged {
+    z-index: 3;
 }
 
 .square::after {

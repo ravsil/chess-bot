@@ -14,23 +14,30 @@ func (p *Pawn) GetPos() uint64   { return p.Pos }
 func (p *Pawn) GetValidMoves(b Board) uint64 {
 	ocupied := b.GetOcupiedSquares()
 	moves := uint64(0)
-	direction := 0
 	enemyPieces := uint64(0)
+	forward := uint64(0)
 	if p.Color == WHITE {
 		enemyPieces = b.GetPieces(BLACK)
+		forward = p.Pos >> 8
 	} else {
-		direction = -16
+		forward = p.Pos << 8
 		enemyPieces = b.GetPieces(WHITE)
 	}
 
-	forward := p.Pos << (8 + direction)
 	canForward := WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, forward, b, PAWN, p.Color)
 	if forward&ocupied == 0 && canForward {
 		moves |= forward
 	}
 
 	if !p.Moved && canForward {
-		doubleForward := forward << (8 + direction)
+		doubleForward := uint64(0)
+		if p.Color == WHITE {
+			doubleForward = forward >> 8
+
+		} else {
+			doubleForward = forward << 8
+		}
+
 		if doubleForward&ocupied == 0 {
 			moves |= doubleForward
 		}
