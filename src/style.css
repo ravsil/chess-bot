@@ -58,7 +58,7 @@ body::after {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    transform: rotate(180deg);
+    transform: rotate(180deg) scaleX(-1);
 }
 
 .row {
@@ -92,7 +92,7 @@ body::after {
     background-size: cover !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
-    transform: rotate(180deg);
+    transform: rotate(180deg) scaleX(-1);
 }
 
 .dragged {

@@ -66,13 +66,13 @@ interact(".piece").draggable({
             data.dx += event.dx;
             data.dy += event.dy;
             event.target.style.transform =
-                `translate(${-data.dx}px, ${-data.dy}px) rotate(180deg)`;
+                `translate(${data.dx}px, ${-data.dy}px) rotate(180deg) scaleX(-1)`;
         },
         end(event) {
             removeTarget()
             event.target.classList.remove("dragged");
             if (!event.dropzone) {
-                event.target.style.transform = "rotate(180deg)";
+                event.target.style.transform = "rotate(180deg) scaleX(-1)";
                 let data = pieceData.get(event.target);
                 data.dx = 0;
                 data.dy = 0;
@@ -90,7 +90,7 @@ interact(".target")
                 event.target.removeChild(event.target.firstChild);
             }
             event.target.appendChild(event.relatedTarget);
-            event.relatedTarget.style.transform = "rotate(180deg)";
+            event.relatedTarget.style.transform = "rotate(180deg) scaleX(-1)";
             let piece = pieceData.get(event.relatedTarget);
             sendMoveToServer(piece, { X: event.target.x, Y: event.target.y });
             piece.dx = 0;

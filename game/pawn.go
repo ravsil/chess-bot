@@ -32,10 +32,10 @@ func (p *Pawn) GetValidMoves(b Board) uint64 {
 	if !p.Moved && canForward {
 		doubleForward := uint64(0)
 		if p.Color == WHITE {
-			doubleForward = forward << 8
+			doubleForward = (forward << 8) | forward
 
 		} else {
-			doubleForward = forward >> 8
+			doubleForward = (forward >> 8) | forward
 		}
 
 		if doubleForward&ocupied == 0 {

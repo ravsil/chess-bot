@@ -13,34 +13,54 @@ func (p *Bishop) GetValidMoves(b Board) uint64 {
 	ocupied := b.GetOcupiedSquares()
 	moves := uint64(0)
 
-	enemyPieces := uint64(0)
-	if p.Color == WHITE {
-		enemyPieces = b.GetPieces(BLACK)
-	} else {
-		enemyPieces = b.GetPieces(WHITE)
-	}
-
 	pos, err := GetSingleBit(p.Pos)
 	if err != nil {
 		panic("Error Getting Bishop Moves")
 	}
-	rightUp := (p.Pos << 7) & ^RIGHT_BORDER
-	if (rightUp&ocupied == 0 || rightUp&enemyPieces != 0) && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rightUp, b, BISHOP, p.Color) {
-		moves |= GetPositiveRayAttacks(ocupied, NORTHEAST, pos)
-	}
-	leftUp := (p.Pos << 9) & ^LEFT_BORDER
-	if (leftUp&ocupied == 0 || leftUp&enemyPieces != 0) && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, leftUp, b, BISHOP, p.Color) {
-		moves |= GetPositiveRayAttacks(ocupied, NORTHWEST, pos)
-	}
-	rightDown := (p.Pos >> 9) & ^RIGHT_BORDER
-	if (rightDown&ocupied == 0 || rightDown&enemyPieces != 0) && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rightDown, b, BISHOP, p.Color) {
-		moves |= GetNegativeRayAttacks(ocupied, SOUTHEAST, pos)
-	}
-	leftDown := (p.Pos >> 7) & ^LEFT_BORDER
-	if (leftDown&ocupied == 0 || leftDown&enemyPieces != 0) && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, leftDown, b, BISHOP, p.Color) {
-		moves |= GetNegativeRayAttacks(ocupied, SOUTHWEST, pos)
-	}
 
+	neAttacks := GetPositiveRayAttacks(ocupied, NORTHEAST, pos)
+	nwAttacks := GetPositiveRayAttacks(ocupied, NORTHWEST, pos)
+	seAttacks := GetNegativeRayAttacks(ocupied, SOUTHEAST, pos)
+	swAttacks := GetNegativeRayAttacks(ocupied, SOUTHWEST, pos)
+
+	friendlyPieces := b.GetPieces(p.Color)
+	neAttacks &= ^friendlyPieces
+	nwAttacks &= ^friendlyPieces
+	seAttacks &= ^friendlyPieces
+	swAttacks &= ^friendlyPieces
+
+	if neAttacks != 0 {
+		for _, square := range GetBits(neAttacks) {
+			testPos := uint64(1) << square
+			if WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, testPos, b, BISHOP, p.Color) {
+				moves |= testPos
+			}
+		}
+	}
+	if nwAttacks != 0 {
+		for _, square := range GetBits(nwAttacks) {
+			testPos := uint64(1) << square
+			if WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, testPos, b, BISHOP, p.Color) {
+				moves |= testPos
+			}
+		}
+	}
+	if seAttacks != 0 {
+		for _, square := range GetBits(seAttacks) {
+			testPos := uint64(1) << square
+			if WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, testPos, b, BISHOP, p.Color) {
+				moves |= testPos
+			}
+		}
+	}
+	if swAttacks != 0 {
+		for _, square := range GetBits(swAttacks) {
+			testPos := uint64(1) << square
+			if WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, testPos, b, BISHOP, p.Color) {
+				moves |= testPos
+			}
+		}
+	}
 	return moves
 }
 

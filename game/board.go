@@ -47,7 +47,6 @@ func (b *Board) GetOcupiedSquares() uint64 {
 // returns the squares black pieces are attacking
 func (b *Board) GetWhiteInfluence() uint64 {
 	influence := uint64(0)
-	whitePieces := b.GetPieces(WHITE)
 	allPieces := b.GetOcupiedSquares()
 
 	influence |= (b.WhitePawns << 9) & ^LEFT_BORDER  // ↖
@@ -62,14 +61,14 @@ func (b *Board) GetWhiteInfluence() uint64 {
 		((b.WhiteKing >> 7) & ^LEFT_BORDER) | // ↙
 		((b.WhiteKing >> 9) & ^RIGHT_BORDER) // ↘
 
-	influence |= (b.WhiteKnights << 15) & ^LEFT_BORDER         // ↓↓←
-	influence |= (b.WhiteKnights << 17) & ^RIGHT_BORDER        // ↓↓→
-	influence |= (b.WhiteKnights >> 15) & ^RIGHT_BORDER        // ↑↑→
-	influence |= (b.WhiteKnights >> 17) & ^LEFT_BORDER         // ↑↑←
-	influence |= (b.WhiteKnights << 6) & ^DOUBLE_LEFT_BORDER   // ←←↓
-	influence |= (b.WhiteKnights << 10) & ^DOUBLE_RIGHT_BORDER // →→↓
-	influence |= (b.WhiteKnights >> 6) & ^DOUBLE_RIGHT_BORDER  // →→↑
-	influence |= (b.WhiteKnights >> 10) & ^DOUBLE_LEFT_BORDER  // ←←↑
+	influence |= (b.WhiteKnights << 17) & ^LEFT_BORDER         // ↑↑→
+	influence |= (b.WhiteKnights << 15) & ^RIGHT_BORDER        // ↑↑←
+	influence |= (b.WhiteKnights >> 17) & ^RIGHT_BORDER        // ↓↓←
+	influence |= (b.WhiteKnights >> 15) & ^LEFT_BORDER         // ↓↓→
+	influence |= (b.WhiteKnights << 10) & ^DOUBLE_LEFT_BORDER  // ↑→→
+	influence |= (b.WhiteKnights << 6) & ^DOUBLE_RIGHT_BORDER  // ↑←←
+	influence |= (b.WhiteKnights >> 6) & ^DOUBLE_LEFT_BORDER   // ↓→→
+	influence |= (b.WhiteKnights >> 10) & ^DOUBLE_RIGHT_BORDER // ↓←←
 
 	for _, bishop := range GetBits(b.WhiteBishops) {
 		influence |= BishopAttacks(allPieces, bishop)
@@ -81,16 +80,12 @@ func (b *Board) GetWhiteInfluence() uint64 {
 		influence |= BishopAttacks(allPieces, queen)
 		influence |= RookAttacks(allPieces, queen)
 	}
-	// Bishop and Rook attacks treats all pieces as capturable,
-	// so I need to remove the same color pieces to make it work
-	influence = influence & ^whitePieces
 	return influence
 }
 
 func (b *Board) GetBlackInfluence() uint64 {
 	influence := uint64(0)
 
-	blackPieces := b.GetPieces(BLACK)
 	allPieces := b.GetOcupiedSquares()
 
 	influence |= (b.BlackPawns >> 9) & ^LEFT_BORDER  // ↖
@@ -105,14 +100,14 @@ func (b *Board) GetBlackInfluence() uint64 {
 		((b.BlackKing >> 7) & ^LEFT_BORDER) | // ↙
 		((b.BlackKing >> 9) & ^RIGHT_BORDER) // ↘
 
-	influence |= (b.BlackKnights << 15) & ^LEFT_BORDER  // ↓↓←
-	influence |= (b.BlackKnights << 17) & ^RIGHT_BORDER // ↓↓→
-	influence |= (b.BlackKnights >> 15) & ^RIGHT_BORDER // ↑↑→
-	influence |= (b.BlackKnights >> 17) & ^LEFT_BORDER  // ↑↑←
-	influence |= (b.BlackKnights << 6) & ^LEFT_BORDER   // ←←↓
-	influence |= (b.BlackKnights << 10) & ^RIGHT_BORDER // →→
-	influence |= (b.BlackKnights >> 6) & ^RIGHT_BORDER  // →→↑
-	influence |= (b.BlackKnights >> 10) & ^LEFT_BORDER  // ←←
+	influence |= (b.BlackKnights << 17) & ^LEFT_BORDER         // ↑↑→
+	influence |= (b.BlackKnights << 15) & ^RIGHT_BORDER        // ↑↑←
+	influence |= (b.BlackKnights >> 17) & ^RIGHT_BORDER        // ↓↓←
+	influence |= (b.BlackKnights >> 15) & ^LEFT_BORDER         // ↓↓→
+	influence |= (b.BlackKnights << 10) & ^DOUBLE_LEFT_BORDER  // ↑→→
+	influence |= (b.BlackKnights << 6) & ^DOUBLE_RIGHT_BORDER  // ↑←←
+	influence |= (b.BlackKnights >> 6) & ^DOUBLE_LEFT_BORDER   // ↓→→
+	influence |= (b.BlackKnights >> 10) & ^DOUBLE_RIGHT_BORDER // ↓←←
 
 	for _, bishop := range GetBits(b.BlackBishops) {
 		influence |= BishopAttacks(allPieces, bishop)
@@ -124,9 +119,6 @@ func (b *Board) GetBlackInfluence() uint64 {
 		influence |= BishopAttacks(allPieces, queen)
 		influence |= RookAttacks(allPieces, queen)
 	}
-	// Bishop and Rook attacks treats all pieces as capturable,
-	// so I need to remove the same color pieces to make it work
-	influence = influence & ^blackPieces
 	return influence
 }
 

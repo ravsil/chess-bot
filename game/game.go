@@ -15,6 +15,13 @@ type Game struct {
 
 func (g *Game) NewGame() {
 	g.Board.InitBoard()
+	g.CurrentTurn = WHITE
+	g.WhitePieces = nil
+	g.BlackPieces = nil
+	g.WhiteKing = nil
+	g.BlackKing = nil
+	g.ValidWhiteMoves = nil
+	g.ValidBlackMoves = nil
 
 	for _, pos := range GetBits(g.Board.WhitePawns) {
 		g.WhitePieces = append(g.WhitePieces, &Pawn{Color: WHITE, Pos: (1 << pos)})
@@ -61,15 +68,11 @@ func (g *Game) GetValidMoves(color PColor) map[uint64]uint64 {
 	if color == WHITE {
 		for _, piece := range g.WhitePieces {
 			moves[piece.GetPos()] = piece.GetValidMoves(g.Board)
-			// fmt.Println("Valid moves for piece at position:", piece.GetPos())
-			// printBits(moves[piece.GetPos()])
 		}
-		g.ValidWhiteMoves = moves
 	} else {
 		for _, piece := range g.BlackPieces {
 			moves[piece.GetPos()] = piece.GetValidMoves(g.Board)
 		}
-		g.ValidBlackMoves = moves
 	}
 	return moves
 }
@@ -97,6 +100,7 @@ func (g *Game) Move(pos uint64, newPos uint64, color PColor) error {
 			p.Move(newPos, &g.Board)
 			g.ChangeTurn()
 			g.RemovePiece(newPos, c) // go ?
+			g.SaveValidMoves()
 			return nil
 		}
 	}
