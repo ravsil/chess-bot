@@ -18,9 +18,9 @@ func (p *Pawn) GetValidMoves(b Board) uint64 {
 	forward := uint64(0)
 	if p.Color == WHITE {
 		enemyPieces = b.GetPieces(BLACK)
-		forward = p.Pos >> 8
-	} else {
 		forward = p.Pos << 8
+	} else {
+		forward = p.Pos >> 8
 		enemyPieces = b.GetPieces(WHITE)
 	}
 
@@ -32,10 +32,10 @@ func (p *Pawn) GetValidMoves(b Board) uint64 {
 	if !p.Moved && canForward {
 		doubleForward := uint64(0)
 		if p.Color == WHITE {
-			doubleForward = forward >> 8
+			doubleForward = forward << 8
 
 		} else {
-			doubleForward = forward << 8
+			doubleForward = forward >> 8
 		}
 
 		if doubleForward&ocupied == 0 {

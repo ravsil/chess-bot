@@ -124,6 +124,31 @@ func InitMs1bTable() {
 	}
 }
 
+func flipVertical(x uint64) uint64 {
+	return (x << 56) |
+		((x << 40) & uint64(0x00ff000000000000)) |
+		((x << 24) & uint64(0x0000ff0000000000)) |
+		((x << 8) & uint64(0x000000ff00000000)) |
+		((x >> 8) & uint64(0x00000000ff000000)) |
+		((x >> 24) & uint64(0x0000000000ff0000)) |
+		((x >> 40) & uint64(0x000000000000ff00)) |
+		(x >> 56)
+}
+func flipHorizontal(x uint64) uint64 {
+	return ((x & 0x0101010101010101) << 7) |
+		((x & 0x0202020202020202) << 5) |
+		((x & 0x0404040404040404) << 3) |
+		((x & 0x0808080808080808) << 1) |
+		((x & 0x1010101010101010) >> 1) |
+		((x & 0x2020202020202020) >> 3) |
+		((x & 0x4040404040404040) >> 5) |
+		((x & 0x8080808080808080) >> 7)
+}
+
+func Rotate180(x uint64) uint64 {
+	return flipHorizontal(flipVertical(x))
+}
+
 func BitScanReverse(bb uint64) int {
 	result := 0
 	if bb > 0xFFFFFFFF {
@@ -192,4 +217,18 @@ func RookAttacks(occ uint64, sq int) uint64 {
 func InitRanged() {
 	InitMs1bTable()
 	InitRayAttacks()
+}
+
+func printBits(occ uint64) {
+	for i := 0; i < 64; i++ {
+		if (occ>>i)&1 != 0 {
+			fmt.Print("1")
+		} else {
+			fmt.Print("0")
+		}
+		if (i+1)%8 == 0 {
+			fmt.Println()
+		}
+	}
+	fmt.Println()
 }

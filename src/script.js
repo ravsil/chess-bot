@@ -1,4 +1,4 @@
-const BLACK = 0, WHITE = 1;
+const BLACK = 1, WHITE = 0;
 // BigInt cannot be converted to json normally
 BigInt.prototype.toJSON = function () {
     return JSON.rawJSON(this.toString());
@@ -42,7 +42,7 @@ async function initBoard() {
 function getPiece(boardSetup, row, col) {
     for (let key in boardSetup) {
         let bitboard = BigInt(boardSetup[key]);
-        let pos = BigInt((boardSize * boardSize) - (col + row * boardSize) - 1);
+        let pos = BigInt((col + row * boardSize));
         if ((bitboard >> pos) & 1n) {
             let name = key.toLowerCase().replace(/s$/, "");
             return name;
@@ -66,13 +66,13 @@ interact(".piece").draggable({
             data.dx += event.dx;
             data.dy += event.dy;
             event.target.style.transform =
-                `translate(${data.dx}px, ${data.dy}px)`;
+                `translate(${-data.dx}px, ${-data.dy}px) rotate(180deg)`;
         },
         end(event) {
             removeTarget()
             event.target.classList.remove("dragged");
             if (!event.dropzone) {
-                event.target.style.transform = "none";
+                event.target.style.transform = "rotate(180deg)";
                 let data = pieceData.get(event.target);
                 data.dx = 0;
                 data.dy = 0;
@@ -86,8 +86,11 @@ interact(".target")
         accept: ".piece",
         overlap: 0.6,
         ondrop: function (event) {
+            if (event.target.firstChild) {
+                event.target.removeChild(event.target.firstChild);
+            }
             event.target.appendChild(event.relatedTarget);
-            event.relatedTarget.style.transform = "none";
+            event.relatedTarget.style.transform = "rotate(180deg)";
             let piece = pieceData.get(event.relatedTarget);
             sendMoveToServer(piece, { X: event.target.x, Y: event.target.y });
             piece.dx = 0;
@@ -146,9 +149,30 @@ function sendMoveToServer(piece, target) {
             } else {
                 moveList = data.ValidBlackMoves
             }
-            // Update the board or handle the response as needed
+            updatePieces(data.Board);
         })
         .catch(error => console.error("Error:", error));
+}
+
+function updatePieces(b) {
+    document.querySelectorAll(".piece").forEach(piece => {
+        piece.remove();
+    });
+    pieceData.clear();
+    let squares = document.querySelectorAll(".square");
+    for (let i = 0; i < boardSize; i++) {
+        for (let j = 0; j < boardSize; j++) {
+            let pieceName = getPiece(b, i, j);
+            if (pieceName != null) {
+                let square = squares[j + i * boardSize];
+                let piece = document.createElement("div");
+                piece.classList.add("piece");
+                piece.classList.add(pieceName);
+                square.appendChild(piece);
+                pieceData.set(piece, { x: j, y: i, dx: 0, dy: 0, color: pieceName[0] == "w" ? WHITE : BLACK });
+            }
+        }
+    }
 }
 
 let pieceData = new Map();

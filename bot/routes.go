@@ -4,12 +4,12 @@ import (
 	. "chess/game"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 )
 
 var game Game
 var playerColor PColor = WHITE
+var bot RandomBot = RandomBot{Color: BLACK}
 
 // Print the board with Unicode chess symbols
 func printBoard() {
@@ -99,11 +99,6 @@ func GetBoard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	game.NewGame()
-	if rand.Intn(2) == 0 {
-		playerColor = WHITE
-	} else {
-		playerColor = BLACK
-	}
 	printBoard()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(game.Board)
@@ -116,7 +111,6 @@ func GetMoves(w http.ResponseWriter, r *http.Request) {
 	}
 
 	validMoves := game.GetValidMoves(playerColor)
-
 	response := struct {
 		ValidMoves  map[uint64]uint64 `json:"validMoves"`
 		PlayerColor PColor            `json:"playerColor"`
@@ -156,6 +150,12 @@ func MovePiece(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if playerColor == WHITE {
+		fmt.Println("Player is playing for white")
+	} else {
+		fmt.Println("Player is playing for black")
+	}
+	bot.Play(&game, bot.Color)
 	printBoard()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(game)

@@ -61,6 +61,8 @@ func (g *Game) GetValidMoves(color PColor) map[uint64]uint64 {
 	if color == WHITE {
 		for _, piece := range g.WhitePieces {
 			moves[piece.GetPos()] = piece.GetValidMoves(g.Board)
+			// fmt.Println("Valid moves for piece at position:", piece.GetPos())
+			// printBits(moves[piece.GetPos()])
 		}
 		g.ValidWhiteMoves = moves
 	} else {
@@ -93,7 +95,7 @@ func (g *Game) Move(pos uint64, newPos uint64, color PColor) error {
 	for _, p := range it {
 		if p.GetPos() == pos {
 			p.Move(newPos, &g.Board)
-			go g.ChangeTurn()
+			g.ChangeTurn()
 			g.RemovePiece(newPos, c) // go ?
 			return nil
 		}
