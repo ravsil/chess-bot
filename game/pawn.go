@@ -5,6 +5,7 @@ type Pawn struct {
 	Pos              uint64
 	Moved            bool
 	CanBeEnPassanted bool
+	WantsToEnPassant bool
 }
 
 func (p *Pawn) GetColor() PColor { return p.Color }
@@ -51,7 +52,16 @@ func (p *Pawn) GetValidMoves(b Board) uint64 {
 	if right&enemyPieces != 0 && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, right, b, PAWN, p.Color) {
 		moves |= right
 	}
-	// TODO: en-passant
+
+	if ((p.Pos<<1) & ^LEFT_BORDER)&enemyPieces != 0 && WouldMyKingBeSafeIfIAnPassanted(p.Pos, left, b, p.Color) {
+		p.WantsToEnPassant = true
+		moves |= left
+	} else if ((p.Pos>>1) & ^RIGHT_BORDER)&enemyPieces != 0 && WouldMyKingBeSafeIfIAnPassanted(p.Pos, right, b, p.Color) {
+		p.WantsToEnPassant = true
+		moves |= right
+	} else {
+		p.WantsToEnPassant = false
+	}
 	return moves
 }
 

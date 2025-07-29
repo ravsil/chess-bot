@@ -97,10 +97,12 @@ func (g *Game) GetValidMoves(color PColor) map[uint64]uint64 {
 		}
 		if !g.WhiteKing.Moved {
 			l := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01000000)
+			// removes white's short castling if it should'nt be available
 			if moves[g.WhiteKing.Pos]&l != 0 && (g.WhiteRooks.Left == nil || g.WhiteRooks.Left.Moved) {
 				moves[g.WhiteKing.Pos] &^= l
 			}
 			r := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000100)
+			// removes white's long castling if it should'nt be available
 			if moves[g.WhiteKing.Pos]&r != 0 && (g.WhiteRooks.Right == nil || g.WhiteRooks.Right.Moved) {
 				moves[g.WhiteKing.Pos] &^= r
 			}
@@ -111,10 +113,12 @@ func (g *Game) GetValidMoves(color PColor) map[uint64]uint64 {
 		}
 		if !g.BlackKing.Moved {
 			l := uint64(0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
+			// removes black's short castling if it should'nt be available
 			if moves[g.BlackKing.Pos]&l != 0 && (g.BlackRooks.Left == nil || g.BlackRooks.Left.Moved) {
 				moves[g.BlackKing.Pos] &^= l
 			}
 			r := uint64(0b00000100_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
+			// removes black's long castling if it should'nt be available
 			if moves[g.BlackKing.Pos]&r != 0 && (g.BlackRooks.Right == nil || g.BlackRooks.Right.Moved) {
 				moves[g.BlackKing.Pos] &^= r
 			}
@@ -125,25 +129,49 @@ func (g *Game) GetValidMoves(color PColor) map[uint64]uint64 {
 
 func (g *Game) handleCastling(newPos uint64, color PColor) {
 	if color == WHITE {
+		// moves the white rook to make short castles
 		if newPos == uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01000000) {
 			if g.WhiteRooks.Left != nil && !g.WhiteRooks.Left.Moved {
 				g.WhiteRooks.Left.Move(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100000, &g.Board)
 			}
 		}
+		// moves the white rook to make long castles
 		if newPos == uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000100) {
 			if g.WhiteRooks.Right != nil && !g.WhiteRooks.Right.Moved {
 				g.WhiteRooks.Right.Move(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001000, &g.Board)
 			}
 		}
 	} else {
+		// moves the black rook to make short castles
 		if newPos == uint64(0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000) {
 			if g.BlackRooks.Left != nil && !g.BlackRooks.Left.Moved {
 				g.BlackRooks.Left.Move(0b00100000_00000000_00000000_00000000_00000000_00000000_00000000_00000000, &g.Board)
 			}
 		}
+		// moves the black rook to make long castles
 		if newPos == uint64(0b00000100_00000000_00000000_00000000_00000000_00000000_00000000_00000000) {
 			if g.BlackRooks.Right != nil && !g.BlackRooks.Right.Moved {
 				g.BlackRooks.Right.Move(0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000, &g.Board)
+			}
+		}
+	}
+}
+
+func (g *Game) handleEnPassant(newPos uint64, color PColor) {
+	if color == WHITE {
+		dest := newPos >> 8
+		for i, p := range g.BlackPieces {
+			if p.GetPos() == dest && p.GetType() == PAWN && p.(*Pawn).CanBeEnPassanted {
+				g.BlackPieces = append(g.BlackPieces[:i], g.BlackPieces[i+1:]...)
+				p.Move(uint64(0), &g.Board)
+			}
+		}
+	} else {
+		dest := newPos << 8
+		for i, p := range g.WhitePieces {
+			if p.GetPos() == dest && p.GetType() == PAWN && p.(*Pawn).CanBeEnPassanted {
+				g.WhitePieces = append(g.WhitePieces[:i], g.WhitePieces[i+1:]...)
+				p.Move(uint64(0), &g.Board)
 			}
 		}
 	}
@@ -172,8 +200,9 @@ func (g *Game) Move(pos uint64, newPos uint64, color PColor) error {
 		if p.GetPos() == pos {
 			if p.GetType() == KING && !p.(*King).Moved {
 				g.handleCastling(newPos, color)
+			} else if p.GetType() == PAWN && p.(*Pawn).WantsToEnPassant {
+				g.handleEnPassant(newPos, color)
 			}
-
 			p.Move(newPos, &g.Board)
 			g.ChangeTurn()
 			g.RemovePiece(newPos, c) // go ?
@@ -203,10 +232,20 @@ func (g *Game) RemovePiece(pos uint64, color PColor) error {
 }
 
 func (g *Game) ChangeTurn() {
+	var it *[]Piece
+
 	if g.CurrentTurn == WHITE {
+		it = &g.BlackPieces
 		g.CurrentTurn = BLACK
 	} else {
+		it = &g.WhitePieces
 		g.CurrentTurn = WHITE
+	}
+
+	for _, p := range *it {
+		if p.GetType() == PAWN {
+			p.(*Pawn).CanBeEnPassanted = false
+		}
 	}
 }
 

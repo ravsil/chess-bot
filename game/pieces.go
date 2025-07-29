@@ -42,3 +42,23 @@ func WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(cur uint64, desire ui
 	}
 	return true
 }
+
+func WouldMyKingBeSafeIfIAnPassanted(cur uint64, desire uint64, realBoard Board, color PColor) bool {
+	b := realBoard
+	// simulate moving to new location
+	b.Update(cur, desire, PAWN, color)
+	if color == WHITE {
+		// simulate removing the captured black pawn
+		b.Update(desire>>8, uint64(0), PAWN, BLACK)
+		if b.GetBlackInfluence()&b.WhiteKing != 0 {
+			return false
+		}
+	} else {
+		// simulate removing the captured white pawn
+		b.Update(desire<<8, uint64(0), PAWN, WHITE)
+		if b.GetWhiteInfluence()&b.BlackKing != 0 {
+			return false
+		}
+	}
+	return true
+}

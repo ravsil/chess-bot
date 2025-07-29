@@ -60,11 +60,9 @@ func (p *King) GetValidMoves(b Board) uint64 {
 			}
 			rk1 := uint64(0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
 			rk2 := uint64(0b00000100_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-			rk3 := uint64(0b00000010_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-			if (rk1|rk2|rk3)&ocupied == 0 &&
+			if (rk1|rk2)&ocupied == 0 &&
 				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rk1, b, KING, BLACK) &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rk2, b, KING, BLACK) &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rk3, b, KING, BLACK) {
+				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rk2, b, KING, BLACK) {
 				moves |= rk2
 			}
 		}
