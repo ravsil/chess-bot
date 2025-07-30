@@ -94,6 +94,30 @@ func (g *Game) GetValidMoves(color PColor) map[uint64]uint64 {
 	if color == WHITE {
 		for _, piece := range g.WhitePieces {
 			moves[piece.GetPos()] = piece.GetValidMoves(g.Board)
+
+			if piece.GetType() == PAWN && piece.(*Pawn).WantsToEnPassant {
+				dirs := []uint64{}
+				enemies := g.Board.GetPieces(BLACK)
+				// check if there is a piece that can be captured normally on the left and on the right
+				if ((piece.GetPos()<<9) & ^LEFT_BORDER)&enemies == 0 {
+					dirs = append(dirs, (piece.GetPos()<<1) & ^LEFT_BORDER)
+				} else if ((piece.GetPos()<<7) & ^RIGHT_BORDER)&enemies == 0 {
+					dirs = append(dirs, (piece.GetPos()>>1) & ^RIGHT_BORDER)
+				}
+
+				for _, dir := range dirs {
+					for _, target := range g.BlackPieces {
+						// remove the move if the piece isn't a pawn or if the pawn can't be en passanted
+						if target.GetPos() == dir && (target.GetType() != PAWN || !target.(*Pawn).CanBeEnPassanted) {
+							moves[piece.GetPos()] &^= dir << 8
+						}
+						if target.GetPos() == dir && (target.GetType() != PAWN || !target.(*Pawn).CanBeEnPassanted) {
+							moves[piece.GetPos()] &^= dir << 8
+						}
+					}
+				}
+			}
+
 		}
 		if !g.WhiteKing.Moved {
 			l := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01000000)
@@ -110,6 +134,29 @@ func (g *Game) GetValidMoves(color PColor) map[uint64]uint64 {
 	} else {
 		for _, piece := range g.BlackPieces {
 			moves[piece.GetPos()] = piece.GetValidMoves(g.Board)
+
+			if piece.GetType() == PAWN && piece.(*Pawn).WantsToEnPassant {
+				dirs := []uint64{}
+				enemies := g.Board.GetPieces(WHITE)
+				// check if there is a piece that can be captured normally on the left and on the right
+				if ((piece.GetPos()>>7) & ^LEFT_BORDER)&enemies == 0 {
+					dirs = append(dirs, (piece.GetPos()<<1) & ^LEFT_BORDER)
+				} else if ((piece.GetPos()>>9) & ^RIGHT_BORDER)&enemies == 0 {
+					dirs = append(dirs, (piece.GetPos()>>1) & ^RIGHT_BORDER)
+				}
+
+				for _, dir := range dirs {
+					for _, target := range g.WhitePieces {
+						// remove the move if the piece isn't a pawn or if the pawn can't be en passanted
+						if target.GetPos() == dir && (target.GetType() != PAWN || !target.(*Pawn).CanBeEnPassanted) {
+							moves[piece.GetPos()] &^= dir << 8
+						}
+						if target.GetPos() == dir && (target.GetType() != PAWN || !target.(*Pawn).CanBeEnPassanted) {
+							moves[piece.GetPos()] &^= dir << 8
+						}
+					}
+				}
+			}
 		}
 		if !g.BlackKing.Moved {
 			l := uint64(0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
@@ -196,12 +243,19 @@ func (g *Game) Move(pos uint64, newPos uint64, color PColor) error {
 		c = WHITE
 	}
 
+	ranks := uint64(0b11111111_00000000_00000000_00000000_00000000_00000000_00000000_11111111)
 	for _, p := range it {
 		if p.GetPos() == pos {
 			if p.GetType() == KING && !p.(*King).Moved {
 				g.handleCastling(newPos, color)
 			} else if p.GetType() == PAWN && p.(*Pawn).WantsToEnPassant {
 				g.handleEnPassant(newPos, color)
+			} else if p.GetType() == PAWN && newPos&ranks != 0 {
+				if color == WHITE {
+					g.WhitePieces = append(g.WhitePieces, &Queen{Color: WHITE, Pos: newPos})
+				} else {
+					g.BlackPieces = append(g.BlackPieces, &Queen{Color: BLACK, Pos: newPos})
+				}
 			}
 			p.Move(newPos, &g.Board)
 			g.ChangeTurn()

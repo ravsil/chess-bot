@@ -144,12 +144,17 @@ function sendMoveToServer(piece, target) {
     }).then(response => response.json())
         .then(data => {
             console.log("Move successful:", data);
-            if (playerColor == WHITE) {
+            if (data == "you won") {
+                alert("Check mate");
+                return;
+            }
+            else if (playerColor == WHITE) {
                 moveList = data.ValidWhiteMoves
             } else {
                 moveList = data.ValidBlackMoves
             }
             updatePieces(data.Board);
+            checkMoveList(moveList)
         })
         .catch(error => console.error("Error:", error));
 }
@@ -173,6 +178,15 @@ function updatePieces(b) {
             }
         }
     }
+}
+
+function checkMoveList(ml) {
+    for (let key in ml) {
+        if (ml[key] != 0) {
+            return
+        }
+    }
+    alert("Check mate, you lost!")
 }
 
 let pieceData = new Map();

@@ -28,6 +28,11 @@ func (b *Board) InitBoard() {
 	b.BlackKnights = 0b01000010_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 	b.BlackBishops = 0b00100100_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 	b.BlackQueens = 0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+	// b.BlackPawns = 1 << 30
+	// b.BlackRooks = 2 << 30
+	// b.BlackKnights = 4 << 30
+	// b.BlackBishops = 8 << 30
+	// b.BlackQueens = 16 << 30
 	b.BlackKing = 0b00010000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 }
 
@@ -124,6 +129,9 @@ func (b *Board) GetBlackInfluence() uint64 {
 
 func (b *Board) Update(pos uint64, newPos uint64, piece PType, color PColor) {
 	var target *uint64
+	promotion := 0
+	lastRank := uint64(0b11111111_00000000_00000000_00000000_00000000_00000000_00000000_11111111)
+
 	if color == WHITE {
 		switch piece {
 		case KING:
@@ -137,6 +145,9 @@ func (b *Board) Update(pos uint64, newPos uint64, piece PType, color PColor) {
 		case KNIGHT:
 			target = &b.WhiteKnights
 		case PAWN:
+			if newPos&lastRank != 0 {
+				promotion = 1
+			}
 			target = &b.WhitePawns
 		}
 	} else {
@@ -152,9 +163,18 @@ func (b *Board) Update(pos uint64, newPos uint64, piece PType, color PColor) {
 		case KNIGHT:
 			target = &b.BlackKnights
 		case PAWN:
+			if newPos&lastRank != 0 {
+				promotion = 2
+			}
 			target = &b.BlackPawns
 		}
 	}
 	*target &^= pos
-	*target |= newPos
+	if promotion == 0 {
+		*target |= newPos
+	} else if promotion == 1 {
+		b.WhiteQueens |= newPos
+	} else {
+		b.BlackQueens |= newPos
+	}
 }

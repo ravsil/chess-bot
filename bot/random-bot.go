@@ -13,18 +13,11 @@ type RandomBot struct {
 	Color PColor
 }
 
-func (b *RandomBot) Play(game *Game, myColor PColor) {
-	// Get the valid moves for the current player
-	if myColor == WHITE {
-		fmt.Println("Bot is playing for White")
-	} else {
-		fmt.Println("Bot is playing for Black")
-	}
+func (b *RandomBot) Play(game *Game, myColor PColor) error {
 	validMoves := game.GetValidMoves(myColor)
-	fmt.Println("Valid moves for bot:", validMoves)
 
 	if len(validMoves) == 0 {
-		return
+		return fmt.Errorf("No valid moves available for %s", myColor)
 	}
 
 	var pieces []uint64
@@ -35,7 +28,7 @@ func (b *RandomBot) Play(game *Game, myColor PColor) {
 	}
 
 	if len(pieces) == 0 {
-		return
+		return fmt.Errorf("No pieces available for %s", myColor)
 	}
 
 	p := pieces[rand.Intn(len(pieces))]
@@ -45,5 +38,5 @@ func (b *RandomBot) Play(game *Game, myColor PColor) {
 	newPos := uint64(1) << m
 
 	game.Move(p, newPos, myColor)
-	fmt.Println("Bot played:", p, "to", newPos)
+	return nil
 }

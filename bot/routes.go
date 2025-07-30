@@ -150,12 +150,11 @@ func MovePiece(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if playerColor == WHITE {
-		fmt.Println("Player is playing for white")
-	} else {
-		fmt.Println("Player is playing for black")
+	err := bot.Play(&game, bot.Color)
+	if err != nil {
+		json.NewEncoder(w).Encode("you won")
+		return
 	}
-	bot.Play(&game, bot.Color)
 	printBoard()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(game)
