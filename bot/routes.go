@@ -9,7 +9,7 @@ import (
 
 var game Game
 var playerColor PColor = WHITE
-var bot RandomBot = RandomBot{Color: BLACK}
+var bot GoBot = GoBot{Color: BLACK}
 
 // Print the board with Unicode chess symbols
 func printBoard() {
@@ -152,6 +152,7 @@ func MovePiece(w http.ResponseWriter, r *http.Request) {
 
 	err := bot.Play(&game, bot.Color)
 	if err != nil {
+		fmt.Println("Bot error:", err)
 		json.NewEncoder(w).Encode("you won")
 		return
 	}

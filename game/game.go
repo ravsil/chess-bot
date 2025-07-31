@@ -119,6 +119,10 @@ func (g *Game) GetValidMoves(color PColor) map[uint64]uint64 {
 			}
 
 		}
+		if g.WhiteKing == nil {
+			fmt.Println(g)
+			panic("white king is nil")
+		}
 		if !g.WhiteKing.Moved {
 			l := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01000000)
 			// removes white's short castling if it should'nt be available
@@ -157,6 +161,10 @@ func (g *Game) GetValidMoves(color PColor) map[uint64]uint64 {
 					}
 				}
 			}
+		}
+		if g.BlackKing == nil {
+			fmt.Println(g)
+			panic("black king is nil")
 		}
 		if !g.BlackKing.Moved {
 			l := uint64(0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
