@@ -150,6 +150,13 @@ func (b *Board) Update(pos uint64, newPos uint64, piece PType, color PColor) {
 			}
 			target = &b.WhitePawns
 		}
+		if newPos != 0 {
+			b.BlackPawns &^= newPos
+			b.BlackKnights &^= newPos
+			b.BlackBishops &^= newPos
+			b.BlackRooks &^= newPos
+			b.BlackQueens &^= newPos
+		}
 	} else {
 		switch piece {
 		case KING:
@@ -167,6 +174,13 @@ func (b *Board) Update(pos uint64, newPos uint64, piece PType, color PColor) {
 				promotion = 2
 			}
 			target = &b.BlackPawns
+		}
+		if newPos != 0 {
+			b.WhitePawns &^= newPos
+			b.WhiteKnights &^= newPos
+			b.WhiteBishops &^= newPos
+			b.WhiteRooks &^= newPos
+			b.WhiteQueens &^= newPos
 		}
 	}
 	*target &^= pos
