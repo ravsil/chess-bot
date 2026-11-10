@@ -4,7 +4,10 @@
 
 package game
 
-import "fmt"
+import (
+	"fmt"
+	"math/bits"
+)
 
 type Direction int
 
@@ -150,36 +153,24 @@ func Rotate180(x uint64) uint64 {
 }
 
 func BitScanReverse(bb uint64) int {
-	result := 0
-	if bb > 0xFFFFFFFF {
-		bb >>= 32
-		result = 32
+	if bb == 0 {
+		return -1
 	}
-	if bb > 0xFFFF {
-		bb >>= 16
-		result += 16
-	}
-	if bb > 0xFF {
-		bb >>= 8
-		result += 8
-	}
-	return result + ms1bTable[bb]
+	return 63 - bits.LeadingZeros64(bb)
 }
 
 func BitScan(bb uint64, reverse bool) int {
-	var rMask uint64
 	if reverse {
-		rMask = ^uint64(0)
-	} else {
-		rMask = 0
+		return BitScanReverse(bb)
 	}
-	bb &= (^bb + 1) | rMask
-	return BitScanReverse(bb)
+	return BitScanForward(bb)
 }
 
 func BitScanForward(bb uint64) int {
-	bb &= ^bb + 1
-	return BitScanReverse(bb)
+	if bb == 0 {
+		return -1
+	}
+	return bits.TrailingZeros64(bb)
 }
 
 func GetPositiveRayAttacks(occupied uint64, dir Direction, square int) uint64 {
@@ -212,6 +203,10 @@ func RookAttacks(occ uint64, sq int) uint64 {
 	return GetPositiveRayAttacks(occ, NORTH, sq) |
 		GetNegativeRayAttacks(occ, SOUTH, sq) | GetPositiveRayAttacks(occ, EAST, sq) |
 		GetNegativeRayAttacks(occ, WEST, sq)
+}
+
+func init() {
+	InitRanged()
 }
 
 func InitRanged() {
