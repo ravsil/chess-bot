@@ -27,43 +27,44 @@ func (p *King) GetValidMoves(b Board) uint64 {
 		(p.Pos >> 9) & ^RIGHT_BORDER}
 
 	for _, m := range ms {
-		if (m&ocupied == 0 || (m&enemyPieces != 0)) && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, m, b, KING, p.Color) {
+		if m != 0 && (m&ocupied == 0 || (m&enemyPieces != 0)) && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, m, b, KING, p.Color) {
 			moves |= m
 		}
 	}
 
-	if !p.Moved {
-		if p.Color == WHITE {
-			lk1 := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100000)
-			lk2 := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01000000)
-			if (lk1|lk2)&ocupied == 0 &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, lk1, b, KING, WHITE) &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, lk2, b, KING, WHITE) {
-				moves |= lk2
+	inCheck := false
+	if p.Color == WHITE {
+		inCheck = b.GetBlackInfluence()&p.Pos != 0
+	} else {
+		inCheck = b.GetWhiteInfluence()&p.Pos != 0
+	}
+
+	if !p.Moved && !inCheck {
+		if p.Color == WHITE && p.Pos == (1<<4) {
+			f1, g1, h1 := uint64(1<<5), uint64(1<<6), uint64(1<<7)
+			if b.WhiteRooks&h1 != 0 && (f1|g1)&ocupied == 0 &&
+				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, f1, b, KING, WHITE) &&
+				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, g1, b, KING, WHITE) {
+				moves |= g1
 			}
-			rk1 := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001000)
-			rk2 := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000100)
-			rk3 := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000010)
-			if (rk1|rk2|rk3)&ocupied == 0 &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rk1, b, KING, WHITE) &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rk2, b, KING, WHITE) &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rk3, b, KING, WHITE) {
-				moves |= rk2
+			a1, b1, c1, d1 := uint64(1<<0), uint64(1<<1), uint64(1<<2), uint64(1<<3)
+			if b.WhiteRooks&a1 != 0 && (b1|c1|d1)&ocupied == 0 &&
+				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, d1, b, KING, WHITE) &&
+				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, c1, b, KING, WHITE) {
+				moves |= c1
 			}
-		} else {
-			lk1 := uint64(0b00100000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-			lk2 := uint64(0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-			if (lk1|lk2)&ocupied == 0 &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, lk1, b, KING, BLACK) &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, lk2, b, KING, BLACK) {
-				moves |= lk2
+		} else if p.Color == BLACK && p.Pos == (1<<60) {
+			f8, g8, h8 := uint64(1<<61), uint64(1<<62), uint64(1<<63)
+			if b.BlackRooks&h8 != 0 && (f8|g8)&ocupied == 0 &&
+				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, f8, b, KING, BLACK) &&
+				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, g8, b, KING, BLACK) {
+				moves |= g8
 			}
-			rk1 := uint64(0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-			rk2 := uint64(0b00000100_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-			if (rk1|rk2)&ocupied == 0 &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rk1, b, KING, BLACK) &&
-				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rk2, b, KING, BLACK) {
-				moves |= rk2
+			a8, b8, c8, d8 := uint64(1<<56), uint64(1<<57), uint64(1<<58), uint64(1<<59)
+			if b.BlackRooks&a8 != 0 && (b8|c8|d8)&ocupied == 0 &&
+				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, d8, b, KING, BLACK) &&
+				WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, c8, b, KING, BLACK) {
+				moves |= c8
 			}
 		}
 	}

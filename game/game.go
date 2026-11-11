@@ -224,8 +224,20 @@ func (g *Game) RemovePiece(pos uint64, color PColor) error {
 	var it *[]Piece
 	if color == WHITE {
 		it = &g.WhitePieces
+		if g.WhiteRooks.Left != nil && g.WhiteRooks.Left.Pos == pos {
+			g.WhiteRooks.Left = nil
+		}
+		if g.WhiteRooks.Right != nil && g.WhiteRooks.Right.Pos == pos {
+			g.WhiteRooks.Right = nil
+		}
 	} else {
 		it = &g.BlackPieces
+		if g.BlackRooks.Left != nil && g.BlackRooks.Left.Pos == pos {
+			g.BlackRooks.Left = nil
+		}
+		if g.BlackRooks.Right != nil && g.BlackRooks.Right.Pos == pos {
+			g.BlackRooks.Right = nil
+		}
 	}
 
 	for i, p := range *it {
