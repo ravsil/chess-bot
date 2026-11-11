@@ -1,6 +1,7 @@
-package game
+package tests
 
 import (
+	. "chess/game"
 	"testing"
 )
 

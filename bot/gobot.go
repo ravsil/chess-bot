@@ -32,7 +32,7 @@ type ttEntry struct {
 	flag  int
 }
 
-type positionKey struct {
+type PositionKey struct {
 	board       Board
 	turn        PColor
 	castleFlags uint8
@@ -40,10 +40,10 @@ type positionKey struct {
 
 type Cache struct {
 	sync.RWMutex
-	entries map[positionKey]ttEntry
+	entries map[PositionKey]ttEntry
 }
 
-var memo = &Cache{entries: make(map[positionKey]ttEntry)}
+var memo = &Cache{entries: make(map[PositionKey]ttEntry)}
 
 func clonePiece(p Piece) Piece {
 	switch v := p.(type) {
@@ -142,7 +142,7 @@ func (b *GoBot) Play(g *Game, myColor PColor) error {
 
 	memo.Lock()
 	if len(memo.entries) > 500000 {
-		memo.entries = make(map[positionKey]ttEntry)
+		memo.entries = make(map[PositionKey]ttEntry)
 	}
 	memo.Unlock()
 
@@ -215,7 +215,7 @@ func (b *GoBot) Play(g *Game, myColor PColor) error {
 	return g.Move(bestMove[0], bestMove[1], myColor)
 }
 
-func evaluate(g *Game, depth int) float64 {
+func Evaluate(g *Game, depth int) float64 {
 	if g.CurrentTurn == WHITE && len(g.ValidWhiteMoves) == 0 {
 		if g.IsInCheck(WHITE) {
 			return -10000.0 - float64(depth)
@@ -238,7 +238,7 @@ func evaluate(g *Game, depth int) float64 {
 	return score
 }
 
-func getPositionKey(g *Game) positionKey {
+func GetPositionKey(g *Game) PositionKey {
 	var flags uint8
 	if g.WhiteKing != nil && !g.WhiteKing.Moved {
 		flags |= 1 << 0
@@ -258,7 +258,7 @@ func getPositionKey(g *Game) positionKey {
 	if g.BlackRooks.Right != nil && !g.BlackRooks.Right.Moved {
 		flags |= 1 << 5
 	}
-	return positionKey{
+	return PositionKey{
 		board:       g.Board,
 		turn:        g.CurrentTurn,
 		castleFlags: flags,
@@ -281,10 +281,10 @@ func minimax(g *Game, depth int, maximizingPlayer bool, alpha float64, beta floa
 	}
 
 	if len(moves) == 0 || depth == 0 {
-		return evaluate(g, depth)
+		return Evaluate(g, depth)
 	}
 
-	key := getPositionKey(g)
+	key := GetPositionKey(g)
 	origAlpha, origBeta := alpha, beta
 
 	memo.RLock()

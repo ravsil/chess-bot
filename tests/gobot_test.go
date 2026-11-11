@@ -1,6 +1,7 @@
-package bot
+package tests
 
 import (
+	. "chess/bot"
 	. "chess/game"
 	"testing"
 )
@@ -93,7 +94,7 @@ func TestEvaluateStalemateIsZero(t *testing.T) {
 	g.CurrentTurn = WHITE
 	g.ValidWhiteMoves = make(map[uint64]uint64) // 0 legal moves
 
-	score := evaluate(&g, 0)
+	score := Evaluate(&g, 0)
 	if score != 0.0 {
 		t.Fatalf("expected stalemate evaluation to be 0.0, got %f", score)
 	}
@@ -106,21 +107,21 @@ func TestPositionKeyIncludesAllPieces(t *testing.T) {
 
 	// Remove a bishop from g2
 	g2.Board.WhiteBishops = 0
-	if getPositionKey(&g1) == getPositionKey(&g2) {
+	if GetPositionKey(&g1) == GetPositionKey(&g2) {
 		t.Errorf("position keys collided despite different bishops")
 	}
 
 	// Remove a queen from g2
 	g2.NewGame()
 	g2.Board.BlackQueens = 0
-	if getPositionKey(&g1) == getPositionKey(&g2) {
+	if GetPositionKey(&g1) == GetPositionKey(&g2) {
 		t.Errorf("position keys collided despite different queens")
 	}
 
 	// Swap kings
 	g2.NewGame()
 	g2.Board.WhiteKing, g2.Board.BlackKing = g2.Board.BlackKing, g2.Board.WhiteKing
-	if getPositionKey(&g1) == getPositionKey(&g2) {
+	if GetPositionKey(&g1) == GetPositionKey(&g2) {
 		t.Errorf("position keys collided despite swapped kings")
 	}
 }

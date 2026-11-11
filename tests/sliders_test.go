@@ -1,19 +1,18 @@
-package game
+package tests
 
 import (
+	. "chess/game"
 	"testing"
 )
 
 func TestRayAttacksAutoInitialized(t *testing.T) {
 	// Without manually calling InitRanged(), rayAttacks should be initialized.
-	pos := 28 // e4
-	attacks := rayAttacks[NORTH][pos]
-	if attacks == 0 {
-		t.Fatalf("rayAttacks[NORTH][%d] should be initialized automatically", pos)
-	}
-
+	pos := 28               // e4
 	occ := uint64(1 << 36) // e5 blocks NORTH ray from e4
 	ray := GetPositiveRayAttacks(occ, NORTH, pos)
+	if ray == 0 {
+		t.Fatalf("rayAttacks[NORTH][%d] should be initialized automatically", pos)
+	}
 	if ray&(1<<36) == 0 {
 		t.Errorf("expected e5 (bit 36) to be attacked, got %064b", ray)
 	}

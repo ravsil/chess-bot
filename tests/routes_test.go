@@ -1,7 +1,8 @@
-package bot
+package tests
 
 import (
 	"bytes"
+	. "chess/bot"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
