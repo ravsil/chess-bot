@@ -12,7 +12,8 @@ import (
 )
 
 type GoBot struct {
-	Color PColor
+	Color    PColor
+	LastMove [2]uint64
 }
 
 type moveResult struct {
@@ -212,6 +213,7 @@ func (b *GoBot) Play(g *Game, myColor PColor) error {
 		return fmt.Errorf("No valid moves could be found or evaluated for %v", myColor)
 	}
 
+	b.LastMove = bestMove
 	return g.Move(bestMove[0], bestMove[1], myColor)
 }
 

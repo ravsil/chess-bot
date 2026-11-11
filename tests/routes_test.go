@@ -44,6 +44,28 @@ func TestRoutesGameplay(t *testing.T) {
 		t.Errorf("Content-Type = %q, want application/json", ct)
 	}
 
+	// Verify response contains both PlayerMove/PlayerBoard and BotMove
+	var moveResp struct {
+		Board       json.RawMessage `json:"Board"`
+		PlayerBoard struct {
+			WhitePawns uint64 `json:"WhitePawns"`
+		} `json:"PlayerBoard"`
+		PlayerMove [2]uint64 `json:"PlayerMove"`
+		BotMove    [2]uint64 `json:"BotMove"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &moveResp); err != nil {
+		t.Fatalf("failed to unmarshal MoveResponse: %v", err)
+	}
+	if moveResp.PlayerMove != [2]uint64{1 << 12, 1 << 28} {
+		t.Errorf("PlayerMove = %v, want [%d %d]", moveResp.PlayerMove, uint64(1<<12), uint64(1<<28))
+	}
+	if moveResp.PlayerBoard.WhitePawns&(1<<28) == 0 {
+		t.Errorf("PlayerBoard should have white pawn on e4 (1<<28)")
+	}
+	if moveResp.BotMove[0] == 0 || moveResp.BotMove[1] == 0 {
+		t.Errorf("expected BotMove to be populated, got %v", moveResp.BotMove)
+	}
+
 	// Verify invalid move returns 400
 	badPayload, _ := json.Marshal(map[string]uint64{
 		"piece": 1 << 12,

@@ -133,6 +133,14 @@ func GetMoves(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+type MoveResponse struct {
+	Game
+	PlayerBoard Board     `json:"PlayerBoard"`
+	PlayerMove  [2]uint64 `json:"PlayerMove"`
+	BotMove     [2]uint64 `json:"BotMove"`
+	Status      string    `json:"Status,omitempty"`
+}
+
 func MovePiece(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -163,18 +171,42 @@ func MovePiece(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	playerBoard := game.Board
+	playerMove := [2]uint64{req.Piece, req.Move}
+
 	err := bot.Play(&game, bot.Color)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
+		status := "you won"
 		if game.IsStalemate(bot.Color) {
-			json.NewEncoder(w).Encode("stalemate")
-			return
+			status = "stalemate"
+		} else {
+			fmt.Println("Bot error:", err)
 		}
-		fmt.Println("Bot error:", err)
-		json.NewEncoder(w).Encode("you won")
+		printBoard()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(MoveResponse{
+			Game:        game,
+			PlayerBoard: playerBoard,
+			PlayerMove:  playerMove,
+			Status:      status,
+		})
 		return
 	}
+
+	status := ""
+	if game.IsCheckmate(playerColor) {
+		status = "you lost"
+	} else if game.IsStalemate(playerColor) {
+		status = "stalemate"
+	}
+
 	printBoard()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(game)
+	json.NewEncoder(w).Encode(MoveResponse{
+		Game:        game,
+		PlayerBoard: playerBoard,
+		PlayerMove:  playerMove,
+		BotMove:     bot.LastMove,
+		Status:      status,
+	})
 }

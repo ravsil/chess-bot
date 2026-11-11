@@ -10,7 +10,20 @@
 
 <body>
     <p id="name" style="color: black; text-align: center;"></p>
-    <div id="board"></div>
+    <div id="game-container">
+        <div id="board"></div>
+        <div id="history-panel">
+            <div id="history-header">Moves</div>
+            <div id="history-status">Live</div>
+            <div id="move-list"></div>
+            <div id="history-controls">
+                <button id="btn-first" title="Start (Home)">&laquo;</button>
+                <button id="btn-prev" title="Previous (Left Arrow)">&lsaquo;</button>
+                <button id="btn-next" title="Next (Right Arrow)">&rsaquo;</button>
+                <button id="btn-last" title="Latest (End)">&raquo;</button>
+            </div>
+        </div>
+    </div>
     <script src="https://unpkg.com/interactjs/dist/interact.min.js"></script>
     <script src="script.js"></script>
 </body>
