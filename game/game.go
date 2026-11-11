@@ -89,46 +89,77 @@ func (g *Game) SaveValidMoves() {
 	g.ValidBlackMoves = g.GetValidMoves(BLACK)
 }
 
+func (g *Game) IsInCheck(color PColor) bool {
+	if color == WHITE {
+		return g.Board.GetBlackInfluence()&g.Board.WhiteKing != 0
+	}
+	return g.Board.GetWhiteInfluence()&g.Board.BlackKing != 0
+}
+
+func (g *Game) IsCheckmate(color PColor) bool {
+	if !g.IsInCheck(color) {
+		return false
+	}
+	return len(g.GetValidMoves(color)) == 0
+}
+
+func (g *Game) IsStalemate(color PColor) bool {
+	if g.IsInCheck(color) {
+		return false
+	}
+	return len(g.GetValidMoves(color)) == 0
+}
+
 func (g *Game) GetValidMoves(color PColor) map[uint64]uint64 {
 	moves := make(map[uint64]uint64)
 	if color == WHITE {
 		for _, piece := range g.WhitePieces {
-			moves[piece.GetPos()] = piece.GetValidMoves(g.Board)
+			if m := piece.GetValidMoves(g.Board); m != 0 {
+				moves[piece.GetPos()] = m
+			}
 		}
 		if g.WhiteKing == nil {
 			fmt.Println(g)
 			panic("white king is nil")
 		}
 		if !g.WhiteKing.Moved {
-			l := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01000000)
+			l := uint64(1 << 6)
 			// removes white's short castling if it should'nt be available
 			if moves[g.WhiteKing.Pos]&l != 0 && (g.WhiteRooks.Left == nil || g.WhiteRooks.Left.Moved) {
 				moves[g.WhiteKing.Pos] &^= l
 			}
-			r := uint64(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000100)
+			r := uint64(1 << 2)
 			// removes white's long castling if it should'nt be available
 			if moves[g.WhiteKing.Pos]&r != 0 && (g.WhiteRooks.Right == nil || g.WhiteRooks.Right.Moved) {
 				moves[g.WhiteKing.Pos] &^= r
 			}
+			if moves[g.WhiteKing.Pos] == 0 {
+				delete(moves, g.WhiteKing.Pos)
+			}
 		}
 	} else {
 		for _, piece := range g.BlackPieces {
-			moves[piece.GetPos()] = piece.GetValidMoves(g.Board)
+			if m := piece.GetValidMoves(g.Board); m != 0 {
+				moves[piece.GetPos()] = m
+			}
 		}
 		if g.BlackKing == nil {
 			fmt.Println(g)
 			panic("black king is nil")
 		}
 		if !g.BlackKing.Moved {
-			l := uint64(0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
+			l := uint64(1 << 62)
 			// removes black's short castling if it should'nt be available
 			if moves[g.BlackKing.Pos]&l != 0 && (g.BlackRooks.Left == nil || g.BlackRooks.Left.Moved) {
 				moves[g.BlackKing.Pos] &^= l
 			}
-			r := uint64(0b00000100_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
+			r := uint64(1 << 58)
 			// removes black's long castling if it should'nt be available
 			if moves[g.BlackKing.Pos]&r != 0 && (g.BlackRooks.Right == nil || g.BlackRooks.Right.Moved) {
 				moves[g.BlackKing.Pos] &^= r
+			}
+			if moves[g.BlackKing.Pos] == 0 {
+				delete(moves, g.BlackKing.Pos)
 			}
 		}
 	}
