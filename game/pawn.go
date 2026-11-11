@@ -25,42 +25,50 @@ func (p *Pawn) GetValidMoves(b Board) uint64 {
 		enemyPieces = b.GetPieces(WHITE)
 	}
 
-	canForward := WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, forward, b, PAWN, p.Color)
-	if forward&ocupied == 0 && canForward {
-		moves |= forward
-	}
-
-	if !p.Moved && canForward {
-		doubleForward := uint64(0)
-		if p.Color == WHITE {
-			doubleForward = (forward << 8) | forward
-
-		} else {
-			doubleForward = (forward >> 8) | forward
+	if forward != 0 && forward&ocupied == 0 {
+		if WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, forward, b, PAWN, p.Color) {
+			moves |= forward
 		}
 
-		if doubleForward&ocupied == 0 {
-			moves |= doubleForward
+		if !p.Moved {
+			doubleForward := uint64(0)
+			if p.Color == WHITE {
+				doubleForward = forward << 8
+			} else {
+				doubleForward = forward >> 8
+			}
+
+			if doubleForward != 0 && doubleForward&ocupied == 0 {
+				if WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, doubleForward, b, PAWN, p.Color) {
+					moves |= doubleForward
+				}
+			}
 		}
 	}
 
-	left := (forward << 1) & ^LEFT_BORDER
-	if left&enemyPieces != 0 && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, left, b, PAWN, p.Color) {
-		moves |= left
-	}
-	right := (forward >> 1) & ^RIGHT_BORDER
-	if right&enemyPieces != 0 && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, right, b, PAWN, p.Color) {
-		moves |= right
-	}
-
-	if ((p.Pos<<1) & ^LEFT_BORDER)&enemyPieces != 0 && WouldMyKingBeSafeIfIAnPassanted(p.Pos, left, b, p.Color) {
-		p.WantsToEnPassant = true
-		moves |= left
-	} else if ((p.Pos>>1) & ^RIGHT_BORDER)&enemyPieces != 0 && WouldMyKingBeSafeIfIAnPassanted(p.Pos, right, b, p.Color) {
-		p.WantsToEnPassant = true
-		moves |= right
+	var leftCapture, rightCapture uint64
+	if p.Color == WHITE {
+		leftCapture = (p.Pos << 7) & ^RIGHT_BORDER
+		rightCapture = (p.Pos << 9) & ^LEFT_BORDER
 	} else {
-		p.WantsToEnPassant = false
+		leftCapture = (p.Pos >> 9) & ^RIGHT_BORDER
+		rightCapture = (p.Pos >> 7) & ^LEFT_BORDER
+	}
+
+	if leftCapture&enemyPieces != 0 && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, leftCapture, b, PAWN, p.Color) {
+		moves |= leftCapture
+	}
+	if rightCapture&enemyPieces != 0 && WouldMyKingBeSafeIfIDidThisComicallyLargeFunctionCall(p.Pos, rightCapture, b, PAWN, p.Color) {
+		moves |= rightCapture
+	}
+
+	if b.EnPassant != 0 {
+		if leftCapture == b.EnPassant && WouldMyKingBeSafeIfIAnPassanted(p.Pos, leftCapture, b, p.Color) {
+			moves |= leftCapture
+		}
+		if rightCapture == b.EnPassant && WouldMyKingBeSafeIfIAnPassanted(p.Pos, rightCapture, b, p.Color) {
+			moves |= rightCapture
+		}
 	}
 	return moves
 }
