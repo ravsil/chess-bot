@@ -95,8 +95,8 @@ func (b *Board) GetBlackInfluence() uint64 {
 
 	allPieces := b.GetOcupiedSquares()
 
-	influence |= (b.BlackPawns >> 9) & ^LEFT_BORDER  // ↖
-	influence |= (b.BlackPawns >> 7) & ^RIGHT_BORDER // ↗
+	influence |= (b.BlackPawns >> 9) & ^RIGHT_BORDER // ↙
+	influence |= (b.BlackPawns >> 7) & ^LEFT_BORDER  // ↘
 
 	influence |= (b.BlackKing << 8) | // ↑
 		(b.BlackKing >> 8) | // ↓
