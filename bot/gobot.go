@@ -1,6 +1,5 @@
-// gogot the 2dn
-// plays with 3 move deep minimax with alpha beta prooning
-// takes too much time even with bitmaps, perhaps implementing it beforehand was a waste of time
+// gobot the 2dn
+// plays with 3 move deep minimax with alpha beta pruning
 
 package bot
 
@@ -8,6 +7,7 @@ import (
 	. "chess/game"
 	"fmt"
 	"math"
+	"math/bits"
 	"sync"
 )
 
@@ -20,12 +20,30 @@ type moveResult struct {
 	score float64
 }
 
-type Cache struct {
-	sync.RWMutex
-	entries map[string]float64
+const (
+	ttExact = iota
+	ttLower
+	ttUpper
+)
+
+type ttEntry struct {
+	score float64
+	depth int
+	flag  int
 }
 
-var memo = &Cache{entries: make(map[string]float64)}
+type positionKey struct {
+	board       Board
+	turn        PColor
+	castleFlags uint8
+}
+
+type Cache struct {
+	sync.RWMutex
+	entries map[positionKey]ttEntry
+}
+
+var memo = &Cache{entries: make(map[positionKey]ttEntry)}
 
 func clonePiece(p Piece) Piece {
 	switch v := p.(type) {
@@ -56,8 +74,8 @@ func cloneGame(g *Game) *Game {
 	newG := &Game{
 		Board:           g.Board,
 		CurrentTurn:     g.CurrentTurn,
-		ValidWhiteMoves: make(map[uint64]uint64),
-		ValidBlackMoves: make(map[uint64]uint64),
+		ValidWhiteMoves: make(map[uint64]uint64, len(g.ValidWhiteMoves)),
+		ValidBlackMoves: make(map[uint64]uint64, len(g.ValidBlackMoves)),
 	}
 
 	for k, v := range g.ValidWhiteMoves {
@@ -94,31 +112,21 @@ func cloneGame(g *Game) *Game {
 		}
 	}
 
-	if len(whiteRooks) >= 1 {
-		if g.WhiteRooks.Left != nil && whiteRooks[0].GetPos() == g.WhiteRooks.Left.GetPos() {
-			newG.WhiteRooks.Left = whiteRooks[0]
-			if len(whiteRooks) > 1 {
-				newG.WhiteRooks.Right = whiteRooks[1]
-			}
-		} else {
-			newG.WhiteRooks.Right = whiteRooks[0]
-			if len(whiteRooks) > 1 {
-				newG.WhiteRooks.Left = whiteRooks[1]
-			}
+	for _, r := range whiteRooks {
+		if g.WhiteRooks.Left != nil && r.GetPos() == g.WhiteRooks.Left.GetPos() {
+			newG.WhiteRooks.Left = r
+		}
+		if g.WhiteRooks.Right != nil && r.GetPos() == g.WhiteRooks.Right.GetPos() {
+			newG.WhiteRooks.Right = r
 		}
 	}
 
-	if len(blackRooks) >= 1 {
-		if g.BlackRooks.Left != nil && blackRooks[0].GetPos() == g.BlackRooks.Left.GetPos() {
-			newG.BlackRooks.Left = blackRooks[0]
-			if len(blackRooks) > 1 {
-				newG.BlackRooks.Right = blackRooks[1]
-			}
-		} else {
-			newG.BlackRooks.Right = blackRooks[0]
-			if len(blackRooks) > 1 {
-				newG.BlackRooks.Left = blackRooks[1]
-			}
+	for _, r := range blackRooks {
+		if g.BlackRooks.Left != nil && r.GetPos() == g.BlackRooks.Left.GetPos() {
+			newG.BlackRooks.Left = r
+		}
+		if g.BlackRooks.Right != nil && r.GetPos() == g.BlackRooks.Right.GetPos() {
+			newG.BlackRooks.Right = r
 		}
 	}
 
@@ -131,6 +139,12 @@ func (b *GoBot) Play(g *Game, myColor PColor) error {
 	if len(validMoves) == 0 {
 		return fmt.Errorf("No valid moves available for %v", myColor)
 	}
+
+	memo.Lock()
+	if len(memo.entries) > 500000 {
+		memo.entries = make(map[positionKey]ttEntry)
+	}
+	memo.Unlock()
 
 	var bestMove [2]uint64
 	var bestScore float64
@@ -201,52 +215,97 @@ func (b *GoBot) Play(g *Game, myColor PColor) error {
 	return g.Move(bestMove[0], bestMove[1], myColor)
 }
 
-func evaluate(g *Game) float64 {
-	score := 0.0
-	score += float64(len(GetBits(g.Board.WhitePawns))-len(GetBits(g.Board.BlackPawns))) * 1.0
-	score += float64(len(GetBits(g.Board.WhiteKnights))-len(GetBits(g.Board.BlackKnights))) * 3.0
-	score += float64(len(GetBits(g.Board.WhiteBishops))-len(GetBits(g.Board.BlackBishops))) * 3.0
-	score += float64(len(GetBits(g.Board.WhiteRooks))-len(GetBits(g.Board.BlackRooks))) * 5.0
-	score += float64(len(GetBits(g.Board.WhiteQueens))-len(GetBits(g.Board.BlackQueens))) * 9.0
+func evaluate(g *Game, depth int) float64 {
+	if g.CurrentTurn == WHITE && len(g.ValidWhiteMoves) == 0 {
+		if g.IsInCheck(WHITE) {
+			return -10000.0 - float64(depth)
+		}
+		return 0.0
+	}
+	if g.CurrentTurn == BLACK && len(g.ValidBlackMoves) == 0 {
+		if g.IsInCheck(BLACK) {
+			return 10000.0 + float64(depth)
+		}
+		return 0.0
+	}
 
-	if len(g.ValidWhiteMoves) == 0 {
-		score -= 1000.0
-	}
-	if len(g.ValidBlackMoves) == 0 {
-		score += 1000.0
-	}
+	score := 0.0
+	score += float64(bits.OnesCount64(g.Board.WhitePawns)-bits.OnesCount64(g.Board.BlackPawns)) * 1.0
+	score += float64(bits.OnesCount64(g.Board.WhiteKnights)-bits.OnesCount64(g.Board.BlackKnights)) * 3.0
+	score += float64(bits.OnesCount64(g.Board.WhiteBishops)-bits.OnesCount64(g.Board.BlackBishops)) * 3.0
+	score += float64(bits.OnesCount64(g.Board.WhiteRooks)-bits.OnesCount64(g.Board.BlackRooks)) * 5.0
+	score += float64(bits.OnesCount64(g.Board.WhiteQueens)-bits.OnesCount64(g.Board.BlackQueens)) * 9.0
 	return score
 }
 
-func getPositionKey(g *Game) string {
-	return fmt.Sprintf("%v|%v|%v|%v|%v|%v", g.Board.WhitePawns, g.Board.BlackPawns, g.Board.WhiteKnights, g.Board.BlackKnights, g.CurrentTurn, g.Board.WhiteKing^g.Board.BlackKing)
+func getPositionKey(g *Game) positionKey {
+	var flags uint8
+	if g.WhiteKing != nil && !g.WhiteKing.Moved {
+		flags |= 1 << 0
+	}
+	if g.WhiteRooks.Left != nil && !g.WhiteRooks.Left.Moved {
+		flags |= 1 << 1
+	}
+	if g.WhiteRooks.Right != nil && !g.WhiteRooks.Right.Moved {
+		flags |= 1 << 2
+	}
+	if g.BlackKing != nil && !g.BlackKing.Moved {
+		flags |= 1 << 3
+	}
+	if g.BlackRooks.Left != nil && !g.BlackRooks.Left.Moved {
+		flags |= 1 << 4
+	}
+	if g.BlackRooks.Right != nil && !g.BlackRooks.Right.Moved {
+		flags |= 1 << 5
+	}
+	return positionKey{
+		board:       g.Board,
+		turn:        g.CurrentTurn,
+		castleFlags: flags,
+	}
 }
 
 func minimax(g *Game, depth int, maximizingPlayer bool, alpha float64, beta float64) float64 {
-	if depth == 0 {
-		return evaluate(g)
-	}
-
-	key := getPositionKey(g)
-	memo.RLock()
-	if val, ok := memo.entries[key]; ok {
-		memo.RUnlock()
-		return val
-	}
-	memo.RUnlock()
-
 	var moves map[uint64]uint64
 	var colorToMove PColor
 
 	if maximizingPlayer {
 		colorToMove = WHITE
+		moves = g.ValidWhiteMoves
 	} else {
 		colorToMove = BLACK
+		moves = g.ValidBlackMoves
 	}
-	moves = g.GetValidMoves(colorToMove)
+	if moves == nil {
+		moves = g.GetValidMoves(colorToMove)
+	}
 
-	if len(moves) == 0 {
-		return evaluate(g)
+	if len(moves) == 0 || depth == 0 {
+		return evaluate(g, depth)
+	}
+
+	key := getPositionKey(g)
+	origAlpha, origBeta := alpha, beta
+
+	memo.RLock()
+	entry, ok := memo.entries[key]
+	memo.RUnlock()
+	if ok && entry.depth >= depth {
+		switch entry.flag {
+		case ttExact:
+			return entry.score
+		case ttLower:
+			if entry.score > alpha {
+				alpha = entry.score
+			}
+		case ttUpper:
+			if entry.score < beta {
+				beta = entry.score
+			}
+		}
+		if alpha >= beta {
+			return entry.score
+		}
 	}
 
 	var result float64
@@ -261,8 +320,12 @@ func minimax(g *Game, depth int, maximizingPlayer bool, alpha float64, beta floa
 					continue
 				}
 				eval := minimax(gameCopy, depth-1, false, alpha, beta)
-				maxEval = math.Max(maxEval, eval)
-				alpha = math.Max(alpha, eval)
+				if eval > maxEval {
+					maxEval = eval
+				}
+				if eval > alpha {
+					alpha = eval
+				}
 				if beta <= alpha {
 					break
 				}
@@ -283,8 +346,12 @@ func minimax(g *Game, depth int, maximizingPlayer bool, alpha float64, beta floa
 					continue
 				}
 				eval := minimax(gameCopy, depth-1, true, alpha, beta)
-				minEval = math.Min(minEval, eval)
-				beta = math.Min(beta, eval)
+				if eval < minEval {
+					minEval = eval
+				}
+				if eval < beta {
+					beta = eval
+				}
 				if beta <= alpha {
 					break
 				}
@@ -296,8 +363,17 @@ func minimax(g *Game, depth int, maximizingPlayer bool, alpha float64, beta floa
 		result = minEval
 	}
 
+	flag := ttExact
+	if result <= origAlpha {
+		flag = ttUpper
+	} else if result >= origBeta {
+		flag = ttLower
+	}
+
 	memo.Lock()
-	memo.entries[key] = result
+	if existing, exists := memo.entries[key]; !exists || depth >= existing.depth {
+		memo.entries[key] = ttEntry{score: result, depth: depth, flag: flag}
+	}
 	memo.Unlock()
 	return result
 }
