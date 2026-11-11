@@ -20,6 +20,23 @@ function canPlay() {
     return !gameOver && !isWaitingForBot && viewIndex === positionHistory.length - 1;
 }
 
+function domToBoardCoords(i, j) {
+    if (playerColor == BLACK) {
+        return { rank: i, file: boardSize - 1 - j };
+    }
+    return { rank: boardSize - 1 - i, file: j };
+}
+
+function boardToDomIndex(rank, file) {
+    if (playerColor == BLACK) {
+        const i = rank;
+        const j = boardSize - 1 - file;
+        return j + i * boardSize;
+    }
+    const i = boardSize - 1 - rank;
+    return file + i * boardSize;
+}
+
 async function parseBigIntJson(response) {
     const text = await response.text();
     const safeText = text.replace(/:\s*(\d{15,})(?=[,\}\]])/g, ':"$1"');
@@ -118,46 +135,63 @@ async function initBoard() {
 
     const response2nd = await fetch("getMoves");
     let r2json = await parseBigIntJson(response2nd);
-    playerColor = await r2json.playerColor;
+    playerColor = r2json.playerColor;
     document.getElementById("name").innerText = (playerColor == WHITE) ? "You are playing White" : "You are playing Black";
-    moveList = await r2json.validMoves;
+    moveList = r2json.validMoves;
 
     board.innerHTML = "";
     for (let i = 0; i < boardSize; i++) {
         let row = document.createElement("div");
         row.className = "row";
-        let rank = boardSize - 1 - i;
         for (let j = 0; j < boardSize; j++) {
+            const { rank, file } = domToBoardCoords(i, j);
             let square = document.createElement("div");
-            let pieceName = getPiece(boardSetup, rank, j);
+            let pieceName = getPiece(boardSetup, rank, file);
             if (pieceName != null) {
                 let piece = document.createElement("div");
                 piece.classList.add("piece");
                 piece.classList.add(pieceName);
                 square.appendChild(piece);
-                pieceData.set(piece, { x: j, y: rank, dx: 0, dy: 0, color: pieceName[0] == "w" ? WHITE : BLACK });
+                pieceData.set(piece, { x: file, y: rank, dx: 0, dy: 0, color: pieceName[0] == "w" ? WHITE : BLACK });
             }
 
             square.className = "square";
             square.className += (i + j) % 2 === 0 ? " white" : " black";
-            square.x = j;
+            square.x = file;
             square.y = rank;
             row.appendChild(square);
         }
         board.appendChild(row);
     }
 
+    const startBoard = r2json.startBoard || boardSetup;
     positionHistory = [{
-        board: boardSetup,
+        board: startBoard,
         from: null,
         to: null,
         notation: "Start",
         color: null
     }];
-    viewIndex = 0;
+    if (
+        playerColor == BLACK &&
+        r2json.openingMove &&
+        BigInt(r2json.openingMove[0]) !== 0n &&
+        BigInt(r2json.openingMove[1]) !== 0n
+    ) {
+        const fromBit = BigInt(r2json.openingMove[0]);
+        const toBit = BigInt(r2json.openingMove[1]);
+        positionHistory.push({
+            board: boardSetup,
+            from: fromBit,
+            to: toBit,
+            notation: formatMove(startBoard, fromBit, toBit),
+            color: WHITE
+        });
+    }
+    viewIndex = positionHistory.length - 1;
     gameOver = false;
     isWaitingForBot = false;
-    goToMove(0);
+    goToMove(viewIndex);
 }
 
 function getPiece(b, rank, file) {
@@ -251,13 +285,14 @@ function addTarget(event) {
     if (!moves) {
         return;
     }
+    const squares = board.getElementsByClassName("square");
     for (let i = 0; i < boardSize; i++) {
-        let rank = boardSize - 1 - i;
         for (let j = 0; j < boardSize; j++) {
-            let targetPos = BigInt(1) << BigInt(j + rank * boardSize);
+            const { rank, file } = domToBoardCoords(i, j);
+            let targetPos = BigInt(1) << BigInt(file + rank * boardSize);
             if ((moves & targetPos) != 0n) {
                 let coords = j + i * boardSize;
-                board.getElementsByClassName("square")[coords].classList.add("target");
+                squares[coords].classList.add("target");
             }
         }
     }
@@ -361,16 +396,16 @@ function updatePieces(b) {
     pieceData.clear();
     let squares = document.querySelectorAll(".square");
     for (let i = 0; i < boardSize; i++) {
-        let rank = boardSize - 1 - i;
         for (let j = 0; j < boardSize; j++) {
-            let pieceName = getPiece(b, rank, j);
+            const { rank, file } = domToBoardCoords(i, j);
+            let pieceName = getPiece(b, rank, file);
             if (pieceName != null) {
                 let square = squares[j + i * boardSize];
                 let piece = document.createElement("div");
                 piece.classList.add("piece");
                 piece.classList.add(pieceName);
                 square.appendChild(piece);
-                pieceData.set(piece, { x: j, y: rank, dx: 0, dy: 0, color: pieceName[0] == "w" ? WHITE : BLACK });
+                pieceData.set(piece, { x: file, y: rank, dx: 0, dy: 0, color: pieceName[0] == "w" ? WHITE : BLACK });
             }
         }
     }
@@ -389,8 +424,7 @@ function highlightLastMove(entry) {
         if (idx >= 0) {
             const file = idx % 8;
             const rank = Math.floor(idx / 8);
-            const i = boardSize - 1 - rank;
-            const coords = file + i * boardSize;
+            const coords = boardToDomIndex(rank, file);
             if (squares[coords]) {
                 squares[coords].classList.add("last-move");
             }

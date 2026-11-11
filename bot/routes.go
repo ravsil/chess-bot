@@ -4,6 +4,7 @@ import (
 	. "chess/game"
 	"encoding/json"
 	"fmt"
+	"math/rand/v2"
 	"net/http"
 	"sync"
 )
@@ -13,6 +14,8 @@ var (
 	gameMu      sync.Mutex
 	playerColor PColor = WHITE
 	bot         GoBot  = GoBot{Color: BLACK}
+	startBoard  Board
+	openingMove [2]uint64
 )
 
 // Print the board with Unicode chess symbols
@@ -106,6 +109,18 @@ func GetBoard(w http.ResponseWriter, r *http.Request) {
 	defer gameMu.Unlock()
 
 	game.NewGame()
+	startBoard = game.Board
+	openingMove = [2]uint64{}
+	if rand.IntN(2) == 0 {
+		playerColor = WHITE
+		bot = GoBot{Color: BLACK}
+	} else {
+		playerColor = BLACK
+		bot = GoBot{Color: WHITE}
+		if err := bot.Play(&game, WHITE); err == nil {
+			openingMove = bot.LastMove
+		}
+	}
 	printBoard()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(game.Board)
@@ -124,9 +139,13 @@ func GetMoves(w http.ResponseWriter, r *http.Request) {
 	response := struct {
 		ValidMoves  map[uint64]uint64 `json:"validMoves"`
 		PlayerColor PColor            `json:"playerColor"`
+		StartBoard  Board             `json:"startBoard"`
+		OpeningMove [2]uint64         `json:"openingMove"`
 	}{
 		ValidMoves:  validMoves,
 		PlayerColor: playerColor,
+		StartBoard:  startBoard,
+		OpeningMove: openingMove,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
