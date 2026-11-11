@@ -5,11 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 )
 
-var game Game
-var playerColor PColor = WHITE
-var bot GoBot = GoBot{Color: BLACK}
+var (
+	game        Game
+	gameMu      sync.Mutex
+	playerColor PColor = WHITE
+	bot         GoBot  = GoBot{Color: BLACK}
+)
 
 // Print the board with Unicode chess symbols
 func printBoard() {
@@ -37,7 +41,7 @@ func printBoard() {
 		fmt.Printf("%d  ", 8-rank)
 		for file := 0; file < 8; file++ {
 			// Convert rank/file to bit position (0-63)
-			bitPos := rank*8 + file
+			bitPos := (7-rank)*8 + file
 			square := uint64(1) << bitPos
 
 			// Check each piece type and color
@@ -98,6 +102,9 @@ func GetBoard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	gameMu.Lock()
+	defer gameMu.Unlock()
+
 	game.NewGame()
 	printBoard()
 	w.Header().Set("Content-Type", "application/json")
@@ -109,6 +116,9 @@ func GetMoves(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	gameMu.Lock()
+	defer gameMu.Unlock()
 
 	validMoves := game.GetValidMoves(playerColor)
 	response := struct {
@@ -138,6 +148,9 @@ func MovePiece(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	gameMu.Lock()
+	defer gameMu.Unlock()
+
 	validMoves := game.GetValidMoves(playerColor)
 	if v, ok := validMoves[req.Piece]; ok && v&req.Move != 0 {
 		err := game.Move(req.Piece, req.Move, playerColor)
@@ -152,6 +165,11 @@ func MovePiece(w http.ResponseWriter, r *http.Request) {
 
 	err := bot.Play(&game, bot.Color)
 	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		if game.IsStalemate(bot.Color) {
+			json.NewEncoder(w).Encode("stalemate")
+			return
+		}
 		fmt.Println("Bot error:", err)
 		json.NewEncoder(w).Encode("you won")
 		return
